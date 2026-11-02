@@ -522,7 +522,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── SEASON 9: SWING TRADING ───────────────────────── */
   {
-    id: 'u9', free: true, title: 'Swing Trading', subtitle: 'Hold for days to weeks, not minutes', color: '#22d3ee', icon: '🌊',
+    id: 'u9', title: 'Swing Trading', subtitle: 'Hold for days to weeks, not minutes', color: '#22d3ee', icon: '🌊',
     lessons: [
       {
         id: 'u9l1', title: 'What is swing trading?', icon: '🏄', xp: 15,
@@ -597,7 +597,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── SEASON 10: INVESTING ───────────────────────── */
   {
-    id: 'u10', free: true, title: 'Investing', subtitle: 'How real wealth gets built: slowly', color: '#a3e635', icon: '🌱',
+    id: 'u10', title: 'Investing', subtitle: 'How real wealth gets built: slowly', color: '#a3e635', icon: '🌱',
     lessons: [
       {
         id: 'u10l1', title: 'Compounding: the 8th wonder', icon: '❄️', xp: 15,

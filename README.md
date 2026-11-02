@@ -2,7 +2,8 @@
 
 A game-style app that teaches day trading from scratch, made for **Leon** and **Barda**.
 
-- 🏠 **Desk**: 11 seasons, 42 lessons (day trading, plus **Swing Trading** and **Investing**). XP, green-day streaks, trader ranks and badges
+- 🛤️ **Tracks**: each learner picks one or more: ⚡ Day Trading, 🌊 Swing Trading, 🏦 Investing, ₿ Crypto & Bitcoin. Shared seasons (like Risk Management) count in every track
+- 🏠 **Desk**: the seasons of your tracks, in order. XP, green-day streaks, trader ranks and badges
 - 🧑‍🏫 **4 teaching methods**: 💬 Bro Talk (chat), 🎯 Call It First (guess first), 📖 Deep Dive (full explanation), ⚡ Market Rush (timed, with combos). All of them are built on retrieval practice, and Review uses spaced repetition
 - ⭐ **Rate every lesson**: a low rating asks why. If the reason makes sense, a change request goes to Leon's 🧪 **Lab** (or to WhatsApp with a code if you're on different phones). Nothing changes until Leon approves
 - ✅ **Quizzes & grades**: every lesson ends with a grade. Each answer is remembered per learner, so the app knows what you've mastered and what needs work
@@ -18,10 +19,11 @@ A game-style app that teaches day trading from scratch, made for **Leon** and **
 
 ## ▶️ Run it on this computer
 
-Double-click **`Start My Trading Bro.bat`**. It opens the app at `http://localhost:8642`.
-In Edge/Chrome, click the **Install** icon in the address bar (or the "Install" pop-up) to get it as a real desktop app with its own icon.
+Double-click **My Trading Bro** on the Desktop (it's also in the Start menu). It opens in its own app window, with no black console window.
 
-(You can also just double-click `index.html`. Everything works except "install as app" and offline mode.)
+How it works: the shortcut runs `launcher/start.vbs`. If the app's tiny local server (`launcher/server.pyw`, port 8642) isn't running yet, it starts it silently, then opens the app with Edge in app mode. The server keeps running quietly in the background, so the next launch is instant. If Python is ever missing, it opens `index.html` directly.
+
+`Start My Trading Bro.bat` still works too (it shows a console window).
 
 ## 📲 Put it on your phones (and Barda's)
 

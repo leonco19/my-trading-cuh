@@ -31,6 +31,12 @@
   COURSE.forEach((u, ui) => u.lessons.forEach((l, li) => LESSONS.push(Object.assign(l, { unit: u, ui, li, n: LESSONS.length }))));
   const LBYID = Object.fromEntries(LESSONS.map(l => [l.id, l]));
   const isQ = c => c.t !== 'learn';
+  const UBYID = Object.fromEntries(COURSE.map(u => [u.id, u]));
+  const TRACKS = (window.TQ_TRACKS || [{ id: 'all', name: 'Everything', icon: '📚', color: '#4c8dff', desc: 'The whole course', units: COURSE.map(u => u.id) }])
+    .map(t => Object.assign(t, { units: t.units.filter(id => UBYID[id]) }));
+  const TBYID = Object.fromEntries(TRACKS.map(t => [t.id, t]));
+  const trackUnits = tid => (TBYID[tid] || TRACKS[0]).units.map(id => UBYID[id]);
+  const trackSeq = tid => [].concat(...trackUnits(tid).map(u => u.lessons));
 
   /* ───────── state ───────── */
   let S = null; // current profile state
@@ -42,6 +48,7 @@
       v: 1, id: p.id, name: p.name, age: null, email: '', onboarded: false, createdAt: Date.now(),
       xp: 0, dailyXp: {}, streak: { count: 0, last: null, best: 0 }, dailyGoal: CFG.defaultDailyGoal,
       lessons: {}, cards: {}, quizLog: [], reviews: 0,
+      tracks: null, track: null,
       method: CFG.defaultMethod, ratings: [], myRequest: null, rejected: [], notice: null,
       arena: { balance: CFG.arena.startBalance, start: CFG.arena.startBalance, days: 0, trades: [], equity: [CFG.arena.startBalance], seed: Math.floor(Math.random() * 1e6) },
       chat: [], badges: {}, friends: {},
@@ -84,14 +91,19 @@
   /* ───────── grading, mastery & spaced repetition ───────── */
   const DAY = 86400000, BOX_DAYS = [0, 1, 3, 7, 16, 35];
   function lessonDone(id) { return !!(S.lessons[id] && S.lessons[id].completedAt); }
-  // Normal seasons unlock in order. "free" seasons (Swing Trading, Investing) open right after Season 0.
-  const START_DONE = () => COURSE[0].lessons.every(x => lessonDone(x.id));
+  // Each track is an ordered path. A lesson opens when the lesson before it IN THAT TRACK is done.
+  // Shared seasons (e.g. Risk Management) count everywhere: finish a lesson once and it's done in every track.
+  const myTracks = () => (S.tracks && S.tracks.length ? S.tracks : TRACKS.map(t => t.id)).filter(id => TBYID[id]);
+  const activeTrack = () => (myTracks().includes(S.track) ? S.track : myTracks()[0]);
+  function unlockedIn(l, tid) { const seq = trackSeq(tid), i = seq.indexOf(l); return i === 0 || (i > 0 && lessonDone(seq[i - 1].id)); }
   function unlocked(l) {
-    if (l.n === 0 || lessonDone(l.id)) return true;
-    if (l.li === 0 && l.unit.free) return START_DONE();
-    return lessonDone(LESSONS[l.n - 1].id);
+    if (lessonDone(l.id)) return true;
+    const mine = myTracks().filter(t => trackSeq(t).includes(l));
+    return (mine.length ? mine : TRACKS.map(t => t.id)).some(t => unlockedIn(l, t));
   }
-  function nextLesson() { const l = LESSONS.find(x => !lessonDone(x.id)); return l ? l.id : null; }
+  function nextLesson(tid) { const l = trackSeq(tid || activeTrack()).find(x => !lessonDone(x.id)); return l ? l.id : null; }
+  const myLessons = () => [...new Set([].concat(...myTracks().map(trackSeq)))];
+  const myUnits = () => [...new Set([].concat(...myTracks().map(trackUnits)))];
   function stars(score) { return score >= 100 ? 3 : score >= 80 ? 2 : 1; }
   const letter = g => g >= 97 ? 'A+' : g >= 90 ? 'A' : g >= 80 ? 'B' : g >= 70 ? 'C' : g >= 60 ? 'D' : 'F';
   function weakLessons() {
@@ -126,7 +138,7 @@
     const a = arenaStats();
     return {
       name: S.name, age: S.age, level: level(S.xp), xp: S.xp, streak: liveStreak(),
-      done: LESSONS.filter(l => lessonDone(l.id)).length, total: LESSONS.length, avgGrade: avgGrade(),
+      done: LESSONS.filter(l => lessonDone(l.id)).length, total: myLessons().length, avgGrade: avgGrade(),
       weak: weakLessons(), next: nextLesson(), arena: a,
       strong: LESSONS.filter(l => S.lessons[l.id] && S.lessons[l.id].last >= 90).map(l => l.title),
     };
@@ -229,6 +241,17 @@
     if (n) setTimeout(() => toast(`🧪 ${n} teaching-method request${n > 1 ? 's' : ''} waiting in your Lab`, 'level'), 500);
   }
 
+  /* ───────── track picker ───────── */
+  function renderTrackPicker() {
+    document.body.classList.add('no-shell');
+    const sel = new Set(S._pickTracks || S.tracks || []);
+    $('#app').innerHTML = `<div class="picker"><h1>What do you want to learn?</h1><p class="muted">Pick one or more. You can change this any time in Stats.</p>
+      <div class="tracks">${TRACKS.map(t => { const n = trackSeq(t.id).length; return `<button class="track-card ${sel.has(t.id) ? 'on' : ''}" data-act="toggle-track" data-id="${t.id}" style="--tc:${t.color}">
+        <span class="tc-check">${sel.has(t.id) ? '✓' : ''}</span><span class="tc-icon">${t.icon}</span><b>${esc(t.name)}</b><span class="muted small">${esc(t.desc)}</span><span class="tc-n">${t.units.length} seasons · ${n} lessons</span></button>`; }).join('')}</div>
+      <button class="btn primary big" data-act="save-tracks" ${sel.size ? '' : 'disabled'}>Let's go 🚀</button>
+      ${S.tracks && S.tracks.length ? '<button class="btn ghost" data-act="cancel-tracks" style="margin-top:8px">Cancel</button>' : ''}</div>`;
+  }
+
   /* ───────── shell ───────── */
   function renderShell() {
     const want = isOwner() ? 'owner' : 'learner';
@@ -255,6 +278,7 @@
   function render() {
     if (!S) return renderPicker();
     if (!S.onboarded) return renderOnboarding();
+    if (!S.tracks || !S.tracks.length) return renderTrackPicker();
     renderShell(); renderTop();
     document.querySelectorAll('nav.side a').forEach(a => a.classList.toggle('on', a.dataset.v === view));
     const m = $('#main'); m.scrollTop = 0;
@@ -295,7 +319,8 @@
   /* ───────── LEARN (the desk) ───────── */
   function renderLearn(m) {
     syncRequest();
-    const nx = nextLesson(), nl = nx && LBYID[nx];
+    const tid = activeTrack(), tr = TBYID[tid], units = trackUnits(tid);
+    const nx = nextLesson(tid), nl = nx && LBYID[nx];
     const p = profileOf(S.id);
     const dx = S.dailyXp[today()] || 0;
     const lv = level(S.xp), cur = S.xp - levelXp(lv), need = levelXp(lv + 1) - levelXp(lv);
@@ -308,12 +333,13 @@
     html += requestBanner();
     if (S.age && S.age < 18) html += `<div class="banner sim">🎮 <b>Simulator mode.</b> Everything here uses virtual money. Build the skill now, so you're ready for real markets at 18.</div>`;
     if (missed + due) html += `<div class="banner warn">🔁 <b>${missed + due} card${missed + due > 1 ? 's' : ''} ready to review</b>${missed ? ` (${missed} you missed${due ? `, ${due} due so you don't forget` : ''})` : ' (due so you don\'t forget)'}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
-    if (nl) html += `<section class="next-card" style="--uc:${nl.unit.color}"><div class="nc-icon">${nl.icon}</div><div class="nc-body"><div class="nc-kicker">NEXT UP · SEASON ${nl.ui} · ${esc(nl.unit.title)}</div><h2>${esc(nl.title)}</h2>
+    if (myTracks().length > 1) html += `<div class="track-tabs">${myTracks().map(t => { const T = TBYID[t], seq = trackSeq(t), d = seq.filter(x => lessonDone(x.id)).length; return `<button class="ttab ${t === tid ? 'on' : ''}" data-act="set-track" data-id="${t}" style="--tc:${T.color}">${T.icon} ${esc(T.name)} <small>${d}/${seq.length}</small></button>`; }).join('')}</div>`;
+    if (nl) html += `<section class="next-card" style="--uc:${nl.unit.color}"><div class="nc-icon">${nl.icon}</div><div class="nc-body"><div class="nc-kicker">NEXT UP · ${esc(tr.name.toUpperCase())} · SEASON ${units.indexOf(nl.unit) + 1}</div><h2>${esc(nl.title)}</h2>
         <div class="muted small">${methodChip(S.method)} ${esc(M.METHODS[S.method].tagline)}</div></div><button class="btn primary big" data-act="open-lesson" data-id="${nl.id}">Start ▶</button></section>`;
-    else html += `<div class="banner good">🎓 <b>You finished the whole course!</b> Keep your edge sharp in the Arena and Review.</div>`;
-    COURSE.forEach((u, ui) => {
+    else html += `<div class="banner good">🎓 <b>You finished the ${esc(tr.name)} track!</b> Keep it sharp in Review${myTracks().length < TRACKS.length ? ', or add another track in Stats' : ''}.</div>`;
+    units.forEach((u, ui) => {
       const open = u.lessons.some(l => unlocked(l)), done = u.lessons.filter(l => lessonDone(l.id)).length, mast = unitMastery(u);
-      html += `<section class="season ${open ? '' : 'locked'}" style="--uc:${u.color}"><header class="season-head"><span class="season-num">S${ui}</span><div><h2>${u.icon} ${esc(u.title)}</h2><div class="muted small">${esc(u.subtitle)}</div></div>
+      html += `<section class="season ${open ? '' : 'locked'}" style="--uc:${u.color}"><header class="season-head"><span class="season-num">S${ui + 1}</span><div><h2>${u.icon} ${esc(u.title)}</h2><div class="muted small">${esc(u.subtitle)}</div></div>
         <div class="season-prog"><b>${done}/${u.lessons.length}</b>${mast != null ? `<span class="muted small">${letter(mast)} avg</span>` : ''}</div></header><div class="season-bar"><div style="width:${done / u.lessons.length * 100}%"></div></div><div class="lrows">`;
       u.lessons.forEach(l => {
         const st = S.lessons[l.id], isDone = lessonDone(l.id), ok = unlocked(l), isCur = l.id === nx;
@@ -702,14 +728,15 @@
     m.innerHTML = `<div class="page"><h1>📊 Stats: ${esc(S.name)}</h1>
       <div class="stat-grid">
         <div class="stat"><b>⚡ ${S.xp}</b><span>Total XP</span></div><div class="stat"><b>${title(me.level)}</b><span>Rank · Lv ${me.level}</span></div>
-        <div class="stat"><b>🟢 ${me.streak}</b><span>Green days (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${LESSONS.length}</b><span>Lessons</span></div>
+        <div class="stat"><b>🟢 ${me.streak}</b><span>Green days (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${myLessons().length}</b><span>Lessons</span></div>
         <div class="stat"><b>${letter(me.avg)} · ${me.avg}%</b><span>Average grade</span></div><div class="stat"><b>${fmtR(a.expectancy)}</b><span>Arena expectancy (${a.trades} trades)</span></div></div>
 
+      <h2>🛤️ Your tracks</h2><div class="banner">${myTracks().map(t => `${TBYID[t].icon} <b>${esc(TBYID[t].name)}</b>`).join(' · ')} <button class="btn ghost sm" data-act="change-tracks" style="margin-left:8px">Change</button></div>
       <h2>🧑‍🏫 Your learning style</h2><div class="banner"><b>${mm.icon} ${esc(mm.name)}</b>: ${esc(mm.tagline)}<div class="muted small">${isOwner() ? 'Change it any time in the 🧪 Lab.' : `Not feeling it? Give the lesson a low rating and tell me why. ${esc(ownerName())} approves changes.`}</div></div>
 
       <h2>📅 This week</h2><div class="week">${last7.map(x => `<div class="wd"><div class="wbar"><div style="height:${Math.round(x.v / maxX * 100)}%" class="${x.v >= S.dailyGoal ? 'hit' : ''}"></div></div><span>${x.l}</span><span class="muted small">${x.v}</span></div>`).join('')}</div>
 
-      <h2>🧠 Mastery by season</h2><div class="mastery">${COURSE.map(u => { const mm2 = unitMastery(u); const d = u.lessons.filter(l => lessonDone(l.id)).length; return `<div class="mrow"><span>${u.icon} ${esc(u.title)}</span><div class="bar"><div style="width:${mm2 || 0}%;background:${u.color}"></div></div><span class="small">${mm2 == null ? '–' : mm2 + '%'} · ${d}/${u.lessons.length}</span></div>`; }).join('')}</div>
+      <h2>🧠 Mastery by season</h2><div class="mastery">${myUnits().map(u => { const mm2 = unitMastery(u); const d = u.lessons.filter(l => lessonDone(l.id)).length; return `<div class="mrow"><span>${u.icon} ${esc(u.title)}</span><div class="bar"><div style="width:${mm2 || 0}%;background:${u.color}"></div></div><span class="small">${mm2 == null ? '–' : mm2 + '%'} · ${d}/${u.lessons.length}</span></div>`; }).join('')}</div>
 
       <h2>🏁 Leaderboard</h2><table class="tbl board"><tr><th>#</th><th>Trader</th><th>XP</th><th>Rank</th><th>🟢</th><th>Lessons</th><th>Avg</th><th>Arena</th></tr>
         ${board.map((b, i) => `<tr class="${b.me ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td><b>${esc(b.name)}</b>${b.me ? ' (you)' : ''}${b.at && !b.me && imported.includes(b) ? ` <span class="muted small">synced ${esc(b.at)}</span>` : ''}</td><td class="mono">${b.xp}</td><td>${title(b.level)}</td><td>${b.streak}</td><td>${b.done}</td><td>${letter(b.avg)}</td><td>${fmtR(b.exp)} · ${b.trades}t</td></tr>`).join('')}</table>
@@ -735,6 +762,11 @@
     if (el.tagName === 'A') e.preventDefault();
     switch (act) {
       case 'pick': return pick(el.dataset.id);
+      case 'toggle-track': { const set = new Set(S._pickTracks || S.tracks || []); set.has(el.dataset.id) ? set.delete(el.dataset.id) : set.add(el.dataset.id); S._pickTracks = [...set]; return renderTrackPicker(); }
+      case 'save-tracks': { const list = TRACKS.map(t => t.id).filter(id => (S._pickTracks || S.tracks || []).includes(id)); if (!list.length) return; delete S._pickTracks; S.tracks = list; if (!list.includes(S.track)) S.track = list[0]; save(); document.body.classList.remove('no-shell'); return go('learn'); }
+      case 'cancel-tracks': delete S._pickTracks; document.body.classList.remove('no-shell'); return go('progress');
+      case 'change-tracks': S._pickTracks = (S.tracks || []).slice(); return renderTrackPicker();
+      case 'set-track': S.track = el.dataset.id; save(); return renderLearn($('#main'));
       case 'switch': if (window.TQ_Arena) window.TQ_Arena.pause(); stopTimer(); S = null; P = null; $('#overlay').hidden = true; history.replaceState(null, '', location.pathname + location.search); return renderPicker();
       case 'go': return go(el.dataset.v);
       case 'open-lesson': if (!LBYID[el.dataset.id] || !unlocked(LBYID[el.dataset.id])) return toast('🔒 Finish the earlier lessons first'); return openLesson(el.dataset.id);
