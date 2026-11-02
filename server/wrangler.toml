@@ -1,0 +1,9 @@
+name = "my-trading-bro-coach"
+main = "coach-worker.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Comma-separated list of sites allowed to call the coach, e.g. "https://leon.github.io"
+ALLOWED_ORIGINS = ""
+# The API key is a secret, not a var. Set it with:  npx wrangler secret put ANTHROPIC_API_KEY
