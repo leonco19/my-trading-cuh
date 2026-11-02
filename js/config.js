@@ -19,7 +19,15 @@ window.TQ_CONFIG = {
   // Online accounts (same account on every device). Paste the Firebase web config here, e.g.
   // cloud: { apiKey: '...', authDomain: '....firebaseapp.com', projectId: '...', appId: '...' },
   // Leave it as null to keep accounts saved on each device only.
-  cloud: null,
+  // (These Firebase web settings are meant to be public; the Firestore security rules protect the data.)
+  cloud: {
+    apiKey: 'AIzaSyBcd5E2W7AYaInaIlL648u8wGoc5TWyj2Y',
+    authDomain: 'my-trading-cuh.firebaseapp.com',
+    projectId: 'my-trading-cuh',
+    storageBucket: 'my-trading-cuh.firebasestorage.app',
+    messagingSenderId: '838368479388',
+    appId: '1:838368479388:web:702d11514089cdccc34559',
+  },
   // Teaching method every learner starts with (see js/methods.js): 'chat' | 'predict' | 'cards' | 'rush'
   defaultMethod: 'chat',
   // After each lesson, a rating BELOW this many stars makes the app ask "why?".

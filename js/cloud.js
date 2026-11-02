@@ -52,6 +52,8 @@
     if (c === 'auth/invalid-email') return 'Please enter a valid email.';
     if (c === 'auth/too-many-requests') return 'Too many tries. Wait a minute and try again.';
     if (c === 'auth/network-request-failed' || /load https/.test(e && e.message)) return 'Can\'t reach the server. Check your internet connection.';
+    if (c === 'auth/operation-not-allowed' || c === 'auth/configuration-not-found') return 'Email sign-in isn\'t switched on yet in Firebase (Authentication → Sign-in method → Email/Password).';
+    if (c === 'auth/unauthorized-domain') return 'This website isn\'t on Firebase\'s allowed list yet (Authentication → Settings → Authorized domains).';
     if (c === 'permission-denied') return 'The database blocked this. (Check the Firestore rules in the README.)';
     return 'Something went wrong (' + (c || (e && e.message) || 'unknown') + ').';
   }
