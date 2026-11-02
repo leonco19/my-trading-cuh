@@ -1,6 +1,6 @@
-/* My Trading Bro – settings. Change the name here when you pick a new one. */
+/* My Trading Cuh – settings. Change the name here when you pick a new one. */
 window.TQ_CONFIG = {
-  appName: 'My Trading Bro',
+  appName: 'My Trading Cuh',
   // Fixed learners for now. Add more objects here later to open it to friends & family.
   profiles: [
     { id: 'leon', name: 'Leon', avatar: '🦁', color: '#4c8dff' },

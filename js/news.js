@@ -1,4 +1,4 @@
-/* My Trading Bro – market news digest.
+/* My Trading Cuh – market news digest.
  * Compiled by Claude from public news sources. Each item links to its source; verify before acting on anything.
  * To refresh: replace the items below (newest first) and update `updated`. */
 window.TQ_NEWS = {

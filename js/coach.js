@@ -1,4 +1,4 @@
-/* My Trading Bro – Coach.
+/* My Trading Cuh – Coach.
  * Offline mode: rule-based answers from the course, glossary, live calculators and the learner's own data.
  * AI mode: if TQ_CONFIG.aiEndpoint is set, questions go to the coach worker (server/coach-worker.js). */
 (function () {

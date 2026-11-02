@@ -1,4 +1,4 @@
-/* My Trading Bro – Arena: a replay simulator for realistic 5-minute trading days (virtual money). */
+/* My Trading Cuh – Arena: a replay simulator for realistic 5-minute trading days (virtual money). */
 (function () {
   'use strict';
   const A = () => window.TQ_App;

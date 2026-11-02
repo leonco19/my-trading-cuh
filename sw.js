@@ -1,6 +1,6 @@
-/* My Trading Bro – service worker: makes the app work offline.
+/* My Trading Cuh – service worker: makes the app work offline.
  * Bump VERSION whenever you change any file so phones pick up the update. */
-const VERSION = 'mtb-v5';
+const VERSION = 'mtb-v7';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './js/config.js', './js/content.js', './js/methods.js', './js/voice.js', './js/news.js', './js/charts.js', './js/coach.js', './js/app.js', './js/arena.js',

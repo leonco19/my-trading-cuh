@@ -1,4 +1,4 @@
-# My Trading Bro - tiny local web server, run silently by start.vbs (pythonw = no console window).
+# My Trading Cuh - tiny local web server, run silently by start.vbs (pythonw = no console window).
 # Logging is switched off because pythonw has no console to print to.
 import functools, http.server, os, sys
 

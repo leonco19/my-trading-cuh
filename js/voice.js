@@ -1,4 +1,4 @@
-/* My Trading Bro – voice: Bro speaks (text-to-speech) and listens (speech recognition).
+/* My Trading Cuh – voice: Cuh speaks (text-to-speech) and listens (speech recognition).
  * Uses the browser's built-in voices, so no API key is needed. Edge has very natural "Online (Natural)" voices.
  * Listening uses the browser's speech recognition (Edge/Chrome, needs internet + microphone permission). */
 (function () {
@@ -54,7 +54,7 @@
       .replace(/(\d),(\d{3})/g, '$1$2')
       .replace(/−/g, ' minus ').replace(/×/g, ' times ').replace(/÷/g, ' divided by ').replace(/≈/g, ' about ')
       .replace(/→/g, ', then ').replace(/–/g, ' to ').replace(/₪\s?(\d[\d.]*)/g, '$1 shekels').replace(/₪/g, ' shekels ')
-      .replace(/%/g, ' percent').replace(/\b(\d+(?:\.\d+)?)R\b/g, '$1 R').replace(/\bvs\.?/gi, 'versus').replace(/\be\.g\./gi, 'for example')
+      .replace(/\bCuh\b/gi, 'Kuh').replace(/%/g, ' percent').replace(/\b(\d+(?:\.\d+)?)R\b/g, '$1 R').replace(/\bvs\.?/gi, 'versus').replace(/\be\.g\./gi, 'for example')
       .replace(/\bIL\b/g, 'Israel').replace(/\bET\b/g, 'Eastern time').replace(/\s*\.\s*(\.\s*)+/g, '. ')
       .replace(/\s+/g, ' ').trim();
   }

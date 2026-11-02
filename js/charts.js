@@ -1,4 +1,4 @@
-/* My Trading Bro – chart engine: seeded market generator + canvas candlestick renderer */
+/* My Trading Cuh – chart engine: seeded market generator + canvas candlestick renderer */
 (function () {
   'use strict';
 

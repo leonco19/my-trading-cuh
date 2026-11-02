@@ -1,4 +1,4 @@
-' My Trading Bro - silent launcher.
+' My Trading Cuh - silent launcher.
 ' Starts the tiny local web server in the background (no black window) if it isn't running yet,
 ' then opens the app in its own window. The Desktop / Start menu shortcuts point here.
 Option Explicit

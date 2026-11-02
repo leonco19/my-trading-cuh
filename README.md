@@ -1,11 +1,11 @@
-# 📈 My Trading Bro
+# 📈 My Trading Cuh
 
 A game-style app that teaches day trading from scratch, made for **Leon** and **Barda**.
 
 - 🛤️ **Tracks**: each learner picks one or more: ⚡ Day Trading, 🌊 Swing Trading, 🏦 Investing, ₿ Crypto & Bitcoin. Shared seasons (like Risk Management) count in every track
 - 🏠 **Desk**: the seasons of your tracks, in order. XP, green-day streaks, trader ranks and badges
-- 🧑‍🏫 **4 teaching methods**: 💬 Bro Talk (chat), 🎯 Call It First (guess first), 📖 Deep Dive (full explanation), ⚡ Market Rush (timed, with combos). All of them are built on retrieval practice, and Review uses spaced repetition
-- 🎧 **Voice Teacher**: Bro reads lessons out loud, asks the questions, and you answer by talking ("B", "true", "thirty three", "repeat", "I don't know"). It's a 5th teaching style, and every lesson also has a 🔊 read-aloud button and a "🎧 Listen instead" option. You can talk to Bro in the Bro tab too. It uses the browser's built-in voices (Edge's natural voices sound best), with no API key. Answering by voice needs a microphone and internet
+- 🧑‍🏫 **4 teaching methods**: 💬 Cuh Talk (chat), 🎯 Call It First (guess first), 📖 Deep Dive (full explanation), ⚡ Market Rush (timed, with combos). All of them are built on retrieval practice, and Review uses spaced repetition
+- 🎧 **Voice Teacher**: Cuh reads lessons out loud, asks the questions, and you answer by talking ("B", "true", "thirty three", "repeat", "I don't know"). It's a 5th teaching style, and every lesson also has a 🔊 read-aloud button and a "🎧 Listen instead" option. You can talk to Cuh in the Cuh tab too. It uses the browser's built-in voices (Edge's natural voices sound best), with no API key. Answering by voice needs a microphone and internet
 - ⭐ **Rate every lesson**: a low rating asks why. If the reason makes sense, a change request goes to Leon's 🧪 **Lab** (or to WhatsApp with a code if you're on different phones). Nothing changes until Leon approves
 - ✅ **Quizzes & grades**: every lesson ends with a grade. Each answer is remembered per learner, so the app knows what you've mastered and what needs work
 - 🔁 **Review**: replays only the questions you got wrong until you fix them
@@ -20,11 +20,11 @@ A game-style app that teaches day trading from scratch, made for **Leon** and **
 
 ## ▶️ Run it on this computer
 
-Double-click **My Trading Bro** on the Desktop (it's also in the Start menu). It opens in its own app window, with no black console window.
+Double-click **My Trading Cuh** on the Desktop (it's also in the Start menu). It opens in its own app window, with no black console window.
 
 How it works: the shortcut runs `launcher/start.vbs`. If the app's tiny local server (`launcher/server.pyw`, port 8642) isn't running yet, it starts it silently, then opens the app with Edge in app mode. The server keeps running quietly in the background, so the next launch is instant. If Python is ever missing, it opens `index.html` directly.
 
-`Start My Trading Bro.bat` still works too (it shows a console window).
+`Start My Trading Cuh.bat` still works too (it shows a console window).
 
 ## 📲 Put it on your phones (and Barda's)
 

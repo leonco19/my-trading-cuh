@@ -1,11 +1,11 @@
-/* My Trading Bro – teaching methods + the feedback loop.
+/* My Trading Cuh – teaching methods + the feedback loop.
  *
  * Every method teaches the SAME lesson content, just in a different way. All of them are built on
  * learning-science techniques that have strong evidence behind them:
  *   • Retrieval practice (testing yourself beats re-reading)       – all methods
  *   • Spaced repetition (review right before you'd forget)        – the Review tab
  *   • Pretesting / "generation effect" (guess first, learn after) – Call It First
- *   • Conversational, bite-sized explanations (less overload)      – Bro Talk
+ *   • Conversational, bite-sized explanations (less overload)      – Cuh Talk
  *   • Worked examples + full explanations                         – Deep Dive
  *   • Desirable difficulty, time pressure, combos (game flow)      – Market Rush
  *
@@ -17,8 +17,8 @@
 
   const METHODS = {
     chat: {
-      id: 'chat', letter: 'C', icon: '💬', name: 'Bro Talk',
-      tagline: 'Your Bro explains it like a chat, one message at a time, with quick checks in between.',
+      id: 'chat', letter: 'C', icon: '💬', name: 'Cuh Talk',
+      tagline: 'Cuh explains it like a chat, one message at a time, with quick checks in between.',
       science: 'Small chunks + checking yourself right after each idea (less overload, better memory).',
       pitch: 'it explains things in small chat-sized pieces and checks you right away',
     },
@@ -42,9 +42,9 @@
     },
     voice: {
       id: 'voice', letter: 'V', icon: '🎧', name: 'Voice Teacher',
-      tagline: 'Bro talks you through the lesson out loud, asks the questions, and you answer by speaking. Hands-free.',
+      tagline: 'Cuh talks you through the lesson out loud, asks the questions, and you answer by speaking. Hands-free.',
       science: 'Hearing + seeing an idea together (dual coding) and answering out loud (the production effect) both make memories stronger.',
-      pitch: 'Bro explains it out loud and you just talk back, no reading needed',
+      pitch: 'Cuh explains it out loud and you just talk back, no reading needed',
     },
   };
   const ORDER = ['chat', 'predict', 'cards', 'rush', 'voice'];

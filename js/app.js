@@ -1,4 +1,4 @@
-/* My Trading Bro – main app (profiles, lessons, teaching methods, ratings & Lab, review, coach, news, progress) */
+/* My Trading Cuh – main app (profiles, lessons, teaching methods, ratings & Lab, review, coach, news, progress) */
 (function () {
   'use strict';
   const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods, V = window.TQ_Voice;
@@ -255,7 +255,7 @@
   function renderShell() {
     const want = isOwner() ? 'owner' : 'learner';
     if ($('#shell') && $('#shell').dataset.kind === want) return;
-    const nav = [['learn', '🏠', 'Desk'], ['arena', '🕹️', 'Arena'], ['review', '🔁', 'Review'], ['coach', '😎', 'Bro'], ['news', '📰', 'News'], ['progress', '📊', 'Stats']];
+    const nav = [['learn', '🏠', 'Desk'], ['arena', '🕹️', 'Arena'], ['review', '🔁', 'Review'], ['coach', '😎', 'Cuh'], ['news', '📰', 'News'], ['progress', '📊', 'Stats']];
     if (isOwner()) nav.push(['lab', '🧪', 'Lab']);
     $('#app').innerHTML = `<div id="shell" data-kind="${want}">
       <nav class="side"><div class="logo"><span class="logo-mark">◢</span> <span>${esc(CFG.appName)}</span></div>${nav.map(([v, i, t]) => `<a href="#${v}" class="nav-${v}" data-act="go" data-v="${v}"><span class="ni">${i}</span><span class="nt">${t}</span>${v === 'lab' ? '<span class="dot" id="labdot" hidden></span>' : ''}</a>`).join('')}
@@ -425,7 +425,7 @@
     }
     V.stop();
     const vbtn = P.method === 'voice' ? `<button class="x spk" data-act="voice-pause" title="${P.vPaused ? 'Play' : 'Pause'}">${P.vPaused ? '▶️' : '⏸️'}</button>` : V.canSpeak ? '<button class="x spk" data-act="read-aloud" title="Read this out loud">🔊</button>' : '';
-    if (P.method === 'voice') body = `<div class="vstat" id="vstat">${P.vPaused ? '⏸️ Paused. Tap ▶️ to continue.' : '🎧 Bro is talking…'}</div>` + body;
+    if (P.method === 'voice') body = `<div class="vstat" id="vstat">${P.vPaused ? '⏸️ Paused. Tap ▶️ to continue.' : '🎧 Cuh is talking…'}</div>` + body;
     o.innerHTML = `<div class="player m-${P.method}"><div class="ptop"><button class="x" data-act="quit" title="Quit">✕</button>${candles()}${vbtn}
         ${P.combo >= 2 ? `<span class="combo">🔥 x${P.combo}</span>` : ''}<span class="ptitle">${P.lesson.icon} ${esc(P.lesson.title)}${mm ? ` · ${mm.icon} ${esc(mm.name)}` : ''}</span></div>
       <div class="pbody">${body}<div id="fb"></div></div>
@@ -457,13 +457,13 @@
     const still = () => P && !P.done && !P.vPaused && curStep().s === s;
     if (s.k === 'chat') {
       const bs = M.bubbles(c.html);
-      vstat('🎧 Bro is talking… <span class="muted small">(tap the reply button to skip ahead)</span>');
+      vstat('🎧 Cuh is talking… <span class="muted small">(tap the reply button to skip ahead)</span>');
       V.speak((P.bub === 1 ? c.title + '. ' : '') + V.toSpeech(bs[P.bub - 1]), { onend: () => setTimeout(() => { if (!still()) return; if (P.bub < bs.length) moreBubble(); else next(); }, 450) });
     } else if (s.k === 'q') {
       if (P.checked) return;
       const opts = c.t === 'mcq' ? ' ' + c.opts.map((o, k) => `${'ABCD'[k]}: ${o}.`).join(' ') : c.t === 'tf' ? ' True or false?' : '';
       const lead = P.first[i] === false ? 'Second chance.' : pickOne(['Quick check.', 'Your turn.', 'Question for you.', 'Okay, quiz time.']);
-      vstat('🎧 Bro is asking…');
+      vstat('🎧 Cuh is asking…');
       V.speak(`${lead} ${c.q}${opts}`, { onend: () => { if (still()) voiceListen(s, 0); } });
     } else {
       V.speak((c && c.title ? c.title + '. ' : '') + V.toSpeech(c ? c.html : ''), { onend: () => setTimeout(() => { if (still()) next(); }, 450) });
@@ -794,13 +794,13 @@
   let coachBusy = false;
   function renderCoach(m) {
     const ai = !!CFG.aiEndpoint;
-    const msgs = S.chat.length ? S.chat : [{ role: 'assistant', content: `Yo ${S.name}! I'm Bro 😎, your trading coach. I know your grades and Arena stats. Ask me about any term, a calculation, the market hours, or "what should I work on?"` }];
-    m.innerHTML = `<div class="page coach"><div class="coach-head"><h1>😎 Ask Bro</h1><span class="pill ${ai ? 'ai' : ''}">${ai ? 'AI mode' : 'Offline coach'}</span>${S.chat.length ? '<button class="btn ghost sm" data-act="clear-chat">Clear chat</button>' : ''}</div>
+    const msgs = S.chat.length ? S.chat : [{ role: 'assistant', content: `Yo ${S.name}! I'm Cuh 😎, your trading coach. I know your grades and Arena stats. Ask me about any term, a calculation, the market hours, or "what should I work on?"` }];
+    m.innerHTML = `<div class="page coach"><div class="coach-head"><h1>😎 Ask Cuh</h1><span class="pill ${ai ? 'ai' : ''}">${ai ? 'AI mode' : 'Offline coach'}</span>${S.chat.length ? '<button class="btn ghost sm" data-act="clear-chat">Clear chat</button>' : ''}</div>
       <div class="chat" id="chat">${msgs.map(x => `<div class="msg ${x.role}">${md(x.content)}</div>`).join('')}</div>
       <div class="suggest">${['What should I work on?', 'Is the market open?', 'What is VWAP?', 'position size 25000 1% entry 40 stop 39.5', 'My stats'].map(s => `<button class="chip-btn" data-act="ask" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
-      <form class="chat-in" id="chatform">${V.canListen ? `<button type="button" class="btn ${coachTalk ? 'primary' : 'ghost'} mic" data-act="coach-mic" title="Talk to Bro">🎤</button>` : ''}<input id="chatq" autocomplete="off" placeholder="${V.canListen ? 'Ask Bro, or tap 🎤 and just talk…' : 'Ask Bro…'}" maxlength="500"><button class="btn primary" type="submit">Send</button></form>
-      <div class="row" style="margin-top:8px">${V.canSpeak ? `<button class="chip-btn ${S.coachVoice ? 'on' : ''}" data-act="coach-voice">${S.coachVoice ? '🔊 Bro talks out loud: ON' : '🔇 Bro talks out loud: OFF'}</button>` : ''}<span class="muted small" id="coachstat"></span></div>
-      <p class="muted small">Education only, not financial advice. Bro never recommends specific stocks to buy.</p></div>`;
+      <form class="chat-in" id="chatform">${V.canListen ? `<button type="button" class="btn ${coachTalk ? 'primary' : 'ghost'} mic" data-act="coach-mic" title="Talk to Cuh">🎤</button>` : ''}<input id="chatq" autocomplete="off" placeholder="${V.canListen ? 'Ask Cuh, or tap 🎤 and just talk…' : 'Ask Cuh…'}" maxlength="500"><button class="btn primary" type="submit">Send</button></form>
+      <div class="row" style="margin-top:8px">${V.canSpeak ? `<button class="chip-btn ${S.coachVoice ? 'on' : ''}" data-act="coach-voice">${S.coachVoice ? '🔊 Cuh talks out loud: ON' : '🔇 Cuh talks out loud: OFF'}</button>` : ''}<span class="muted small" id="coachstat"></span></div>
+      <p class="muted small">Education only, not financial advice. Cuh never recommends specific stocks to buy.</p></div>`;
     const chat = $('#chat'); chat.scrollTop = chat.scrollHeight;
     $('#chatform').addEventListener('submit', e => { e.preventDefault(); const q = $('#chatq').value.trim(); if (q) askCoach(q); });
   }
@@ -813,7 +813,7 @@
     S.chat.push({ role: 'assistant', content: res.text }); save(); coachBusy = false;
     if (view === 'coach') renderCoach($('#main'));
     if (view === 'coach' && S.coachVoice) {
-      const st = $('#coachstat'); if (st) st.textContent = '😎 Bro is talking… (tap 🎤 to stop)';
+      const st = $('#coachstat'); if (st) st.textContent = '😎 Cuh is talking… (tap 🎤 to stop)';
       V.speak(res.text, { onend: () => { const st2 = $('#coachstat'); if (st2) st2.textContent = ''; if (coachTalk && view === 'coach') coachListen(); } });
     }
   }
@@ -824,10 +824,10 @@
       interim: true,
       oninterim: t => { if (inp) inp.value = t; },
       onresult: t => {
-        if (/^(stop|bye|goodbye|that'?s all|thanks bro|thank you)\b/i.test(t.trim())) { coachTalk = false; if (st) st.textContent = ''; V.speak('Anytime. Later, ' + S.name + '!'); renderCoach($('#main')); return; }
+        if (/^(stop|bye|goodbye|that'?s all|thanks bro|thanks cuh|thanks cuz|thank you)\b/i.test(t.trim())) { coachTalk = false; if (st) st.textContent = ''; V.speak('Anytime. Later, ' + S.name + '!'); renderCoach($('#main')); return; }
         askCoach(t);
       },
-      onerror: err => { coachTalk = false; if (st) st.textContent = err === 'not-allowed' ? '🎤 The microphone is blocked. Allow it in the browser to talk to Bro.' : err === 'network' ? '🌐 Talking needs internet.' : ''; },
+      onerror: err => { coachTalk = false; if (st) st.textContent = err === 'not-allowed' ? '🎤 The microphone is blocked. Allow it in the browser to talk to Cuh.' : err === 'network' ? '🌐 Talking needs internet.' : ''; },
       onend: got => { if (!got) { coachTalk = false; const b = $('[data-act=coach-mic]'); if (b) b.className = 'btn ghost mic'; if (st && /Listening/.test(st.textContent)) st.textContent = ''; } },
     });
   }
@@ -844,7 +844,7 @@
         ${cats.map(c => `<button class="chip-btn ${newsFilter === c ? 'on' : ''}" data-act="nf" data-f="${esc(c)}">${esc(c)}</button>`).join('')}</div>
       <div class="news">${items.map(i => `<article class="news-card"><div class="news-meta"><span class="flag">${i.region === 'israel' ? '🇮🇱' : '🌍'}</span><span class="cat cat-${esc(i.cat.split(' ')[0].toLowerCase())}">${esc(i.cat)}</span><span class="muted small">${esc(i.date)}</span></div>
         <h3>${esc(i.title)}</h3><p>${esc(i.summary)}</p><div class="why">💡 <b>Why it matters for traders:</b> ${esc(i.why)}</div>
-        <div class="row"><a class="src" href="${esc(i.url)}" target="_blank" rel="noopener">Source: ${esc(i.source)} ↗</a>${i.lesson ? `<a href="#" class="lesson-link" data-act="open-lesson" data-id="${i.lesson}">📘 Related lesson</a>` : ''}<button class="btn ghost sm" data-act="ask-news" data-t="${esc(i.title)}">Ask Bro</button></div></article>`).join('')}</div>
+        <div class="row"><a class="src" href="${esc(i.url)}" target="_blank" rel="noopener">Source: ${esc(i.source)} ↗</a>${i.lesson ? `<a href="#" class="lesson-link" data-act="open-lesson" data-id="${i.lesson}">📘 Related lesson</a>` : ''}<button class="btn ghost sm" data-act="ask-news" data-t="${esc(i.title)}">Ask Cuh</button></div></article>`).join('')}</div>
       <h2>🔴 Live sources (check daily)</h2><div class="sources">${N.liveSources.map(s => `<a class="source" href="${esc(s.url)}" target="_blank" rel="noopener"><b>${esc(s.name)}</b><span>${esc(s.desc)}</span></a>`).join('')}</div></div>`;
   }
 
@@ -886,9 +886,9 @@
 
       <h2>📝 Recent sessions</h2>${S.quizLog.length ? `<table class="tbl"><tr><th>Date</th><th>Session</th><th>Style</th><th>Grade</th></tr>${S.quizLog.slice(0, 15).map(q => `<tr><td>${new Date(q.at).toLocaleDateString('en-GB')}</td><td>${esc(q.title)}</td><td>${q.method && M.METHODS[q.method] ? M.METHODS[q.method].icon : q.kind === 'review' ? '🔁' : ''}</td><td class="${q.score < 80 ? 'bad' : 'good'}">${letter(q.score)} · ${q.score}% (${q.right}/${q.total})</td></tr>`).join('')}</table>` : '<p class="muted">No sessions yet.</p>'}
 
-      <h2>🎧 Bro's voice</h2>${V.canSpeak ? `<div class="settings"><div class="row"><select id="vname"><option value="">Best available voice</option>${V.englishVoices().map(v => `<option value="${esc(v.name)}" ${v.name === (S.voice || {}).name ? 'selected' : ''}>${esc(v.name.replace(/^Microsoft /, '').replace(/ - English.*$/, ''))} (${esc(v.lang)})</option>`).join('')}</select>
-        <select id="vrate">${[[0.85, 'Slow'], [1, 'Normal'], [1.15, 'Fast'], [1.3, 'Very fast']].map(([r, t]) => `<option value="${r}" ${r === ((S.voice || {}).rate || 1) ? 'selected' : ''}>${t}</option>`).join('')}</select><button class="btn ghost sm" data-act="voice-test">▶ Hear Bro</button></div>
-        <div class="muted small">${V.canListen ? 'Talking back to Bro uses your microphone and needs internet.' : 'This browser can speak but can\'t listen. Use Edge or Chrome to answer by voice.'} The most natural voices are in Microsoft Edge.</div></div>` : '<p class="muted">This browser has no voices. Try Microsoft Edge.</p>'}
+      <h2>🎧 Cuh's voice</h2>${V.canSpeak ? `<div class="settings"><div class="row"><select id="vname"><option value="">Best available voice</option>${V.englishVoices().map(v => `<option value="${esc(v.name)}" ${v.name === (S.voice || {}).name ? 'selected' : ''}>${esc(v.name.replace(/^Microsoft /, '').replace(/ - English.*$/, ''))} (${esc(v.lang)})</option>`).join('')}</select>
+        <select id="vrate">${[[0.85, 'Slow'], [1, 'Normal'], [1.15, 'Fast'], [1.3, 'Very fast']].map(([r, t]) => `<option value="${r}" ${r === ((S.voice || {}).rate || 1) ? 'selected' : ''}>${t}</option>`).join('')}</select><button class="btn ghost sm" data-act="voice-test">▶ Hear Cuh</button></div>
+        <div class="muted small">${V.canListen ? 'Talking back to Cuh uses your microphone and needs internet.' : 'This browser can speak but can\'t listen. Use Edge or Chrome to answer by voice.'} The most natural voices are in Microsoft Edge.</div></div>` : '<p class="muted">This browser has no voices. Try Microsoft Edge.</p>'}
 
       <h2>⚙️ Settings</h2><div class="settings">
         <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
@@ -925,7 +925,7 @@
       case 'voice-pause': return togglePause();
       case 'voice-listen': { const st = curStep().s; return voiceListen(st, 1); }
       case 'read-aloud': return readAloud();
-      case 'voice-test': return V.speak(`Yo ${S.name}! I'm Bro, your trading teacher. Let's make some smart moves today.`);
+      case 'voice-test': return V.speak(`Yo ${S.name}! I'm Cuh, your trading teacher. Let's make some smart moves today.`);
       case 'coach-voice': S.coachVoice = !S.coachVoice; save(); if (!S.coachVoice) V.stop(); return renderCoach($('#main'));
       case 'coach-mic': {
         if (coachTalk) { coachTalk = false; V.stop(); return renderCoach($('#main')); }

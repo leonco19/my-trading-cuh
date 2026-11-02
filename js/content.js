@@ -1,4 +1,4 @@
-/* My Trading Bro – course content.
+/* My Trading Cuh – course content.
  * Card types:
  *   learn  {t,title,html,chart?}
  *   mcq    {t,q,opts,a,why,chart?}
@@ -56,7 +56,7 @@ window.TQ_COURSE = [
           { t: 'learn', title: 'Your path', html: `
             <p>1. <b>Lessons</b> (this!): short sessions taught in different styles (chat, guess-first, deep dive or a timed rush). Earn XP to get promoted (Intern → Analyst → … → Market Wizard), and learn every day to stack <b>green days</b> 🟢.</p>
             <p>2. <b>Arena</b>: a chart simulator. Trade realistic market days with virtual money. Every trade is scored in <b>R</b> (you'll learn this soon).</p>
-            <p>3. <b>Bro</b> 😎: ask your coach questions any time.</p>
+            <p>3. <b>Cuh</b> 😎: ask your coach questions any time.</p>
             <p>4. <b>News</b>: learn how real events (earnings, IPOs, bankruptcies, interest rates) move markets.</p>
             <p>5. <b>Rate every lesson</b> ⭐: if a teaching style isn't working for you, say why, and the app will ask to switch it.</p>`},
           { t: 'learn', title: 'The 3 golden rules (we\'ll enforce them)', html: `
@@ -442,7 +442,7 @@ window.TQ_COURSE = [
             <ul><li><b>Israeli banks</b> (trading through your bank account): easy, but often higher fees.</li>
             <li><b>Israeli brokerage firms / investment houses</b>: usually cheaper than banks, regulated by the <b>Israel Securities Authority (רשות ניירות ערך)</b>.</li>
             <li><b>International brokers</b> (e.g. Interactive Brokers): low costs and direct US access, but you handle tax reporting yourself.</li></ul>
-            <p>🔞 <b>Age:</b> you generally need to be <b>18</b> to open your own trading account, and margin/short-selling privileges have extra requirements. Until then: simulator + learning. That's exactly what My Trading Bro is for.</p>`},
+            <p>🔞 <b>Age:</b> you generally need to be <b>18</b> to open your own trading account, and margin/short-selling privileges have extra requirements. Until then: simulator + learning. That's exactly what My Trading Cuh is for.</p>`},
           { t: 'learn', title: 'Currency risk (USD/ILS)', html: `
             <p>Trading US stocks means your money is in <b>dollars</b>. If the shekel strengthens, your dollar profits are worth fewer shekels, and vice versa. Converting currency also costs a fee at many brokers.</p>`},
           { t: 'mcq', q: 'Who regulates securities brokers and investment firms in Israel?', opts: ['The Israel Tax Authority', 'The Israel Securities Authority (ISA)', 'The Ministry of Education', 'Nobody'], a: 1, why: 'The ISA (רשות ניירות ערך) supervises the capital markets. Before using any firm, check it\'s licensed.' },
@@ -693,7 +693,7 @@ window.TQ_GLOSSARY = {
   'spread': 'The spread is the difference between the bid (best buyer) and the ask (best seller). It\'s a hidden cost on every round trip.',
   'bid': 'The bid is the highest price a buyer is currently willing to pay.',
   'ask': 'The ask (offer) is the lowest price a seller is currently willing to accept.',
-  'stop': 'A stop-loss is an order that exits your position automatically if price reaches a level that proves your idea wrong. In My Trading Bro every trade needs one.',
+  'stop': 'A stop-loss is an order that exits your position automatically if price reaches a level that proves your idea wrong. In My Trading Cuh every trade needs one.',
   'stop loss': 'A stop-loss is an order that exits your position automatically if price reaches a level that proves your idea wrong.',
   'limit order': 'A limit order fills only at your price or better. You control the price but might not get filled.',
   'market order': 'A market order fills immediately at the best available price. Fast, but you may suffer slippage.',

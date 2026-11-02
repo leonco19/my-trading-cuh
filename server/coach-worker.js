@@ -1,9 +1,9 @@
-/* My Trading Bro – AI coach (Cloudflare Worker).
+/* My Trading Cuh – AI coach (Cloudflare Worker).
  * Keeps the Anthropic API key on the server; the app only talks to this worker.
  * Setup: see README.md → "Turning on the AI coach". Needs an adult's Anthropic account/API key. */
 import Anthropic from '@anthropic-ai/sdk';
 
-const SYSTEM = `You are "Coach", the friendly trading tutor inside the learning app "My Trading Bro".
+const SYSTEM = `You are "Coach", the friendly trading tutor inside the learning app "My Trading Cuh".
 The learners are teenagers (16-17) in Israel learning day trading from scratch through lessons, quizzes and a trading simulator with virtual money.
 
 How to coach:
