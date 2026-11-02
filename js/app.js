@@ -99,6 +99,19 @@
     const pick = !local ? remote : !remote ? local : ((remote.updatedAt || 0) >= (local.updatedAt || 0) ? remote : local);
     if (pick) { pick.id = uid; storeSet(KEY(uid), JSON.stringify(pick)); }
   }
+  async function moveOnline(la, pw) {
+    let st = null; try { st = JSON.parse(storeGet(KEY(la.id)) || 'null'); } catch (e) { st = null; }
+    const profile = { email: la.email, name: la.name, avatar: la.avatar, color: la.color, emailHash: la.emailHash || await sha256(la.email) };
+    const state = Object.assign(fresh(profile), st || {}, { name: la.name, email: la.email, onboarded: true, updatedAt: Date.now() });
+    const uid = await C.signUp(la.email, pw, profile, Object.assign({}, state, { id: '' }));
+    state.id = uid; storeSet(KEY(uid), JSON.stringify(state));
+    saveAccounts(accounts().filter(x => x.id !== la.id));
+    upsertAccount(Object.assign({ id: uid, cloud: true, createdAt: la.createdAt || Date.now() }, profile));
+    const L = lab(); L.requests.forEach(r => { if (r.learner === la.id) r.learner = uid; }); saveLab(L);
+    toast('☁️ Your account is now online: sign in on any device', 'badge');
+    return uid;
+  }
+  const localAcct = email => accounts().find(x => x.email === email && !x.cloud);
   function busy(f, on, label) { const b = f.querySelector('button[type=submit]'); if (!b) return; if (on) { b.dataset.l = b.textContent; b.textContent = label || 'One sec…'; b.disabled = true; } else { b.textContent = b.dataset.l || b.textContent; b.disabled = false; } }
   function saveOther(st) { if (S && st.id === S.id) { S = st; save(); } else storeSet(KEY(st.id), JSON.stringify(st)); }
   function lab() { try { return Object.assign({ requests: [] }, JSON.parse(storeGet(LABKEY) || 'null') || {}); } catch (e) { return { requests: [] }; } }
@@ -332,7 +345,14 @@
         upsertAccount({ id: uid, email, name: pr.name || email.split('@')[0], avatar: pr.avatar || AVATARS[0], color: pr.color || COLORS[0], emailHash: pr.emailHash || await sha256(email), cloud: true });
         mergeCloudState(uid, d);
         busy(f, false); return startSession(uid, f.stay.checked);
-      } catch (e2) { busy(f, false); err.textContent = C.friendly(e2); return; }
+      } catch (e2) {
+        const la = localAcct(email);
+        if (la && /credential|user-not-found|wrong-password/.test(e2.code || '') && await hashPw(pw, la.salt) === la.hash) {
+          try { busy(f, true, 'Moving your account online…'); const uid = await moveOnline(la, pw); busy(f, false); return startSession(uid, f.stay.checked); }
+          catch (e3) { busy(f, false); err.textContent = C.friendly(e3); return; }
+        }
+        busy(f, false); err.textContent = C.friendly(e2); return;
+      }
     }
     const a = accounts().find(x => x.email === email);
     if (!a) { err.innerHTML = `No account with this email on this device. <a href="#" data-act="auth-mode" data-m="signup">Create one?</a>`; authEmail = email; return; }
@@ -342,7 +362,13 @@
   }
   async function doSignUp(f) {
     const err = $('#ob-err'); const E = f.elements; const email = normEmail(E.email.value), pw = E.password.value, name = E.namedItem('name').value.trim(), age = +E.age.value;
-    const e = !validEmail(email) ? 'Please enter a valid email.' : accounts().some(x => x.email === email) ? 'This email has an account already. Sign in instead.' : !pw ? 'Please choose a password (anything you like).' : !name ? 'Tell Cuh what to call you.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
+    const la0 = C.enabled() ? localAcct(email) : null;
+    if (la0 && pw && await hashPw(pw, la0.salt) === la0.hash) {
+      busy(f, true, 'Moving your account online…');
+      try { const uid = await moveOnline(la0, pw); busy(f, false); return startSession(uid, E.stay.checked); }
+      catch (e3) { busy(f, false); err.textContent = C.friendly(e3); return; }
+    }
+    const e = !validEmail(email) ? 'Please enter a valid email.' : accounts().some(x => x.email === email && (!C.enabled() || x.cloud)) ? 'This email has an account already. Sign in instead.' : la0 ? 'This email already has an account on this device. Use the same password to move it online, or sign in.' : !pw ? 'Please choose a password (anything you like).' : !name ? 'Tell Cuh what to call you.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
     if (e) { err.textContent = e; return; }
     err.textContent = '';
     const legacyId = E.legacy ? E.legacy.value : '';
