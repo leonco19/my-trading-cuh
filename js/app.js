@@ -522,6 +522,9 @@
           <div class="sc-price">${title(lv)} <span class="muted">Lv ${lv}</span></div>
           <div class="sc-promo"><div class="bar"><div style="width:${Math.round(cur / need * 100)}%"></div></div><span class="muted small">${need - cur} XP to your next promotion</span></div>
           <div class="sc-meta"><span>⚡ <b>${S.xp}</b> XP</span><span>🟢 <b>${liveStreak()}</b> green day${liveStreak() === 1 ? '' : 's'}</span><span>🎯 <b>${dx}/${S.dailyGoal}</b> today</span><span>${methodChip(S.method)}</span></div></div></section>`;
+    const myAcct = acctOf(S.id);
+    if (C.enabled() && myAcct && !myAcct.cloud) html += `<div class="banner sim" id="move-banner">☁️ <b>Your account is only saved on this device.</b> Move it online so it works on your phone <i>and</i> PC, with all your progress. Just type your password:
+      <form class="row" id="moveform" style="margin-top:8px"><input type="password" name="pw" placeholder="Your password" autocomplete="current-password" style="flex:1;min-width:140px"><button class="btn primary sm" type="submit">Move online</button></form><div class="err" id="move-err"></div></div>`;
     html += requestBanner();
     if (S.age && S.age < 18) html += `<div class="banner sim">🎮 <b>Simulator mode.</b> Everything here uses virtual money. Build the skill now, so you're ready for real markets at 18.</div>`;
     if (missed + due) html += `<div class="banner warn">🔁 <b>${missed + due} card${missed + due > 1 ? 's' : ''} ready to review</b>${missed ? ` (${missed} you missed${due ? `, ${due} due so you don't forget` : ''})` : ' (due so you don\'t forget)'}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
@@ -541,6 +544,24 @@
       html += `</div></section>`;
     });
     m.innerHTML = `<div class="learn">${html}</div>`;
+    const mf = $('#moveform');
+    if (mf) mf.addEventListener('submit', async e => {
+      e.preventDefault();
+      const la = acctOf(S.id), pw = mf.elements.pw.value, er = $('#move-err'), b = mf.querySelector('button');
+      if (!pw) { er.textContent = 'Type your password first.'; return; }
+      if (await hashPw(pw, la.salt) !== la.hash) { er.textContent = 'That\'s not this account\'s password.'; return; }
+      b.disabled = true; b.textContent = 'Moving…'; er.textContent = '';
+      try {
+        save();
+        const uid = await moveOnline(la, pw);
+        try { sessionStorage.setItem(SESSKEY, uid); } catch (x) { }
+        if (storeGet(SESSKEY)) storeSet(SESSKEY, uid);
+        enter(uid);
+      } catch (x) {
+        b.disabled = false; b.textContent = 'Move online';
+        er.textContent = (x && x.code === 'auth/email-already-in-use') ? 'This email is already online. Sign out, then sign in with the password you used for the online account.' : C.friendly(x);
+      }
+    });
   }
 
   /* ───────── LESSON / QUIZ PLAYER ───────── */
@@ -1087,7 +1108,7 @@
       <h2>⚙️ Settings</h2><div class="settings">
         <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
         <div class="muted small">Signed in as <b>${esc(S.email)}</b> · ${esc(S.name)} · age ${esc(S.age)}</div>
-        <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
+        <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn ghost sm" data-act="switch">🚪 Sign out</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
         <textarea id="restorebox" hidden placeholder="Paste backup code and press Restore again"></textarea></div></div>`;
     $('#goal').addEventListener('change', e => { S.dailyGoal = +e.target.value; save(); renderTop(); });
     const vn = $('#vname'), vr = $('#vrate');
