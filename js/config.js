@@ -11,6 +11,8 @@ window.TQ_CONFIG = {
   // or the account that brought over the old "leon" progress.
   owner: 'leon',
   ownerEmailHash: '8dd4669a0705065a9b332013cfccc8be75dd757db079bfa760acda8c28eb1859',
+  // ...and the boss PIN must be entered once per device to open the Lab (SHA-256 of "boss:" + PIN).
+  bossPinHash: 'c491f0b0ee5a3c9e408d616e270eee1eead943b4d6418825e7073b687cef86e9',
   // Used to make approval codes (so a code only works for its own request). Change it to any random text.
   ownerSecret: 'bro-desk-2026',
   // Invite-only testing: the online version asks for an invite code once per device (SHA-256 of the code).

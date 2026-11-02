@@ -49,7 +49,11 @@
   const legacyOf = id => (CFG.profiles || []).find(x => x.id === id);
   const profileOf = id => acctOf(id) || legacyOf(id) || { id, name: 'Trader', avatar: '🙂', color: '#4c8dff' };
   const isOwnerId = id => { const a = acctOf(id); return id === CFG.owner || !!(a && CFG.ownerEmailHash && a.emailHash === CFG.ownerEmailHash); };
-  const isOwner = () => !!S && isOwnerId(S.id);
+  // The boss = the owner's email AND the boss PIN entered once on this device.
+  const BOSSKEY = id => 'mtb:v1:boss:' + id;
+  const bossPinOK = id => !CFG.bossPinHash || storeGet(BOSSKEY(id)) === CFG.bossPinHash;
+  const isOwnerEmail = () => !!S && isOwnerId(S.id);
+  const isOwner = () => isOwnerEmail() && bossPinOK(S.id);
   const ownerName = () => { const a = accounts().find(x => isOwnerId(x.id)); return (a && a.name) || (legacyOf(CFG.owner) || {}).name || 'the boss'; };
   const hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
   async function sha256(t) {
@@ -244,7 +248,7 @@
   /* ───────── routing ───────── */
   const VIEWS = ['learn', 'arena', 'review', 'coach', 'news', 'progress', 'lab'];
   let view = 'learn';
-  function go(v) { V.stop(); coachTalk = false; view = VIEWS.includes(v) ? v : 'learn'; if (view === 'lab' && !isOwner()) view = 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
+  function go(v) { V.stop(); coachTalk = false; view = VIEWS.includes(v) ? v : 'learn'; if (view === 'lab' && !isOwnerEmail()) view = 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (S && S.onboarded && h !== view && VIEWS.includes(h)) go(h); });
 
   /* ───────── sign in / create account ───────── */
@@ -447,10 +451,10 @@
 
   /* ───────── shell ───────── */
   function renderShell() {
-    const want = isOwner() ? 'owner' : 'learner';
+    const want = isOwnerEmail() ? 'owner' : 'learner';
     if ($('#shell') && $('#shell').dataset.kind === want) return;
     const nav = [['learn', '🏠', 'Desk'], ['arena', '🕹️', 'Arena'], ['review', '🔁', 'Review'], ['coach', '😎', 'Cuh'], ['news', '📰', 'News'], ['progress', '📊', 'Stats']];
-    if (isOwner()) nav.push(['lab', '🧪', 'Lab']);
+    if (isOwnerEmail()) nav.push(['lab', '🧪', 'Lab']);
     $('#app').innerHTML = `<div id="shell" data-kind="${want}">
       <nav class="side"><div class="logo"><span class="logo-mark">◢</span> <span>${esc(CFG.appName)}</span></div>${nav.map(([v, i, t]) => `<a href="#${v}" class="nav-${v}" data-act="go" data-v="${v}"><span class="ni">${i}</span><span class="nt">${t}</span>${v === 'lab' ? '<span class="dot" id="labdot" hidden></span>' : ''}</a>`).join('')}
         <a href="#" class="switch" data-act="switch"><span class="ni">🚪</span><span class="nt">Sign out</span></a></nav>
@@ -956,7 +960,20 @@
     return lines.join('\n');
   }
   function renderLab(m) {
-    if (!isOwner()) return go('learn');
+    if (!isOwnerEmail()) return go('learn');
+    if (!bossPinOK(S.id)) {
+      m.innerHTML = `<div class="page"><div class="picker" style="min-height:auto;padding-top:30px"><div class="w-hero">🔑</div><h1>Boss PIN</h1><p class="muted">Enter your boss PIN once on this device to open the Lab.</p>
+        <form class="onboard" id="pinform" novalidate><input name="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="font-size:1.4rem;text-align:center;letter-spacing:.3em">
+        <div class="err" id="pin-err"></div><button class="btn primary big" type="submit">Unlock the Lab</button></form></div></div>`;
+      const pf = $('#pinform'); pf.elements.pin.focus();
+      pf.addEventListener('submit', async e => {
+        e.preventDefault();
+        const pin = pf.elements.pin.value.trim();
+        if (pin && await sha256('boss:' + pin) === CFG.bossPinHash) { storeSet(BOSSKEY(S.id), CFG.bossPinHash); toast('🔓 Lab unlocked on this device', 'badge'); renderTop(); renderLab($('#main')); const n = pendingCount(); if (n) toast(`🧪 ${n} request${n > 1 ? 's' : ''} waiting`, 'level'); }
+        else { $('#pin-err').textContent = 'Wrong PIN.'; pf.elements.pin.select(); }
+      });
+      return;
+    }
     const L = lab(), pend = L.requests.filter(r => r.status === 'pending'), old = L.requests.filter(r => r.status !== 'pending').slice(0, 8);
     const learners = accounts().map(a => (a.id === S.id ? S : load(a.id))).filter(st => st.onboarded);
     const opts = sel => M.ORDER.map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${M.METHODS[k].icon} ${M.METHODS[k].name}</option>`).join('');
