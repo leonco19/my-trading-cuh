@@ -1,7 +1,7 @@
 /* My Trading Cuh – main app (profiles, lessons, teaching methods, ratings & Lab, review, coach, news, progress) */
 (function () {
   'use strict';
-  const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods, V = window.TQ_Voice;
+  const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods, V = window.TQ_Voice, C = window.TQ_Cloud;
   const KEY = id => 'mtb:v1:' + id;
   const ACCTKEY = 'mtb:v1:accounts', SESSKEY = 'mtb:v1:session';
   const LABKEY = 'mtb:v1:lab';
@@ -83,7 +83,23 @@
     if (!M.METHODS[out.method]) out.method = CFG.defaultMethod;
     return out;
   }
-  function save() { if (S) storeSet(KEY(S.id), JSON.stringify(S)); }
+  function save() {
+    if (!S) return;
+    S.updatedAt = Date.now();
+    storeSet(KEY(S.id), JSON.stringify(S));
+    const a = acctOf(S.id);
+    if (a && a.cloud) C.save(S.id, S, { email: a.email, name: a.name, avatar: a.avatar, color: a.color, emailHash: a.emailHash });
+  }
+  // Keep a local copy of a cloud account (for the quick-pick buttons and offline use).
+  function upsertAccount(acct) { const list = accounts().filter(x => x.id !== acct.id && x.email !== acct.email); list.push(acct); saveAccounts(list); }
+  // Use whichever copy of the progress is newer: this device's or the cloud's.
+  function mergeCloudState(uid, cloudData) {
+    let local = null; try { local = JSON.parse(storeGet(KEY(uid)) || 'null'); } catch (e) { local = null; }
+    const remote = cloudData && cloudData.state;
+    const pick = !local ? remote : !remote ? local : ((remote.updatedAt || 0) >= (local.updatedAt || 0) ? remote : local);
+    if (pick) { pick.id = uid; storeSet(KEY(uid), JSON.stringify(pick)); }
+  }
+  function busy(f, on, label) { const b = f.querySelector('button[type=submit]'); if (!b) return; if (on) { b.dataset.l = b.textContent; b.textContent = label || 'One sec…'; b.disabled = true; } else { b.textContent = b.dataset.l || b.textContent; b.disabled = false; } }
   function saveOther(st) { if (S && st.id === S.id) { S = st; save(); } else storeSet(KEY(st.id), JSON.stringify(st)); }
   function lab() { try { return Object.assign({ requests: [] }, JSON.parse(storeGet(LABKEY) || 'null') || {}); } catch (e) { return { requests: [] }; } }
   function saveLab(L) { storeSet(LABKEY, JSON.stringify(L)); }
@@ -263,11 +279,11 @@
           <button class="btn primary big" type="submit">Sign in</button>
           <p class="muted small center-t">New here? <a href="#" data-act="auth-mode" data-m="signup">Create an account</a></p>
           ${back}
-          <p class="muted small center-t">Forgot your password? ${esc(ownerName())} can reset it in the 🧪 Lab on this device.</p>
+          <p class="muted small center-t">${C.enabled() ? 'Forgot your password? <a href="#" data-act="forgot-pw">Email me a reset link</a>' : `Forgot your password? ${esc(ownerName())} can reset it in the 🧪 Lab on this device.`}</p>
         </form></div>`;
     } else {
       const legacy = (CFG.profiles || []).map(p => ({ p, st: (() => { try { return JSON.parse(storeGet(KEY(p.id)) || 'null'); } catch (e) { return null; } })() }))
-        .filter(x => x.st && x.st.onboarded && !acctOf(x.p.id));
+        .filter(x => x.st && x.st.onboarded && !acctOf(x.p.id) && !storeGet(KEY(x.p.id) + ':claimed'));
       $('#app').innerHTML = `<div class="picker">${logo}<h1>Create your account</h1><p class="muted">You sign in with your email and password.</p>
         <form class="onboard" id="authform" novalidate>
           <label>Email<input name="email" type="email" autocomplete="username" required value="${esc(authEmail)}" placeholder="you@example.com"><span class="field-msg" id="email-msg"></span></label>
@@ -307,6 +323,17 @@
     const err = $('#ob-err'); const email = normEmail(f.email.value), pw = f.password.value;
     if (!validEmail(email)) { err.textContent = 'Please enter your email.'; return; }
     if (!pw) { err.textContent = 'Please enter your password.'; return; }
+    if (C.enabled()) {
+      err.textContent = ''; busy(f, true, 'Signing in…');
+      try {
+        const uid = await C.signIn(email, pw);
+        const d = await C.load(uid);
+        const pr = (d && d.profile) || {};
+        upsertAccount({ id: uid, email, name: pr.name || email.split('@')[0], avatar: pr.avatar || AVATARS[0], color: pr.color || COLORS[0], emailHash: pr.emailHash || await sha256(email), cloud: true });
+        mergeCloudState(uid, d);
+        busy(f, false); return startSession(uid, f.stay.checked);
+      } catch (e2) { busy(f, false); err.textContent = C.friendly(e2); return; }
+    }
     const a = accounts().find(x => x.email === email);
     if (!a) { err.innerHTML = `No account with this email on this device. <a href="#" data-act="auth-mode" data-m="signup">Create one?</a>`; authEmail = email; return; }
     err.textContent = '';
@@ -319,6 +346,23 @@
     if (e) { err.textContent = e; return; }
     err.textContent = '';
     const legacyId = E.legacy ? E.legacy.value : '';
+    if (C.enabled()) {
+      const ai2 = +((f.querySelector('input[name=avatar]:checked') || {}).value || 0);
+      const profile = { email, name, avatar: AVATARS[ai2], color: COLORS[accounts().length % COLORS.length], emailHash: await sha256(email) };
+      // Bring old progress from this device if they picked it, otherwise start fresh.
+      let st0 = null; if (legacyId) { try { st0 = JSON.parse(storeGet(KEY(legacyId)) || 'null'); } catch (x) { st0 = null; } }
+      busy(f, true, 'Creating your account…');
+      try {
+        const base = Object.assign(fresh(profile), st0 || {}, { name, email, age, onboarded: true, updatedAt: Date.now() });
+        const uid = await C.signUp(email, pw, profile, Object.assign({}, base, { id: '' }));
+        base.id = uid; storeSet(KEY(uid), JSON.stringify(base));
+        if (legacyId) storeSet(KEY(legacyId) + ':claimed', uid);
+        upsertAccount(Object.assign({ id: uid, cloud: true, createdAt: Date.now() }, profile));
+        busy(f, false);
+        if (age < 18) setTimeout(() => toast('🎮 Simulator mode: practice now, real money at 18', 'level'), 600);
+        return startSession(uid, E.stay.checked);
+      } catch (e2) { busy(f, false); err.textContent = C.friendly(e2); return; }
+    }
     const id = legacyId || 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const ai = +((f.querySelector('input[name=avatar]:checked') || {}).value || 0);
     const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
@@ -339,6 +383,7 @@
     if (n) setTimeout(() => toast(`🧪 ${n} teaching-method request${n > 1 ? 's' : ''} waiting in your Lab`, 'level'), 500);
   }
   function signOut() {
+    if (C.enabled()) C.signOut();
     try { sessionStorage.removeItem(SESSKEY); } catch (e) { }
     storeSet(SESSKEY, '');
     if (S) authEmail = S.email || '';
@@ -878,7 +923,7 @@
       <div class="share"><div><b>Got a request code on WhatsApp?</b> Paste it here (it starts with <code>MTBR.</code>).</div><div class="row"><input id="reqcode" placeholder="MTBR.…"><button class="btn ghost sm" data-act="add-req">Add request</button></div></div>
       ${old.length ? `<h2>🗂️ Decided</h2><table class="tbl"><tr><th>When</th><th>Who</th><th>Change</th><th>Result</th><th></th></tr>${old.map(r => `<tr><td>${new Date(r.decidedAt || r.at).toLocaleDateString('en-GB')}</td><td>${esc(r.name)}</td><td>${M.METHODS[r.from].icon} → ${M.METHODS[r.decidedTo || r.to].icon} ${esc(M.METHODS[r.decidedTo || r.to].name)}</td><td class="${r.status === 'approved' ? 'good' : 'muted'}">${r.status}</td><td>${r.status === 'approved' && r.learner !== S.id ? `<button class="btn ghost sm" data-act="show-code" data-id="${r.id}">Code</button>` : ''}</td></tr>`).join('')}</table>` : ''}
       <h2>🎛️ Teaching style per trader</h2><p class="muted small">You're the boss: you can also switch anyone directly.</p>
-      <div class="lab-grid">${learners.map(st => `<div class="lab-card"><div class="row"><span class="avatar sm" style="--pc:${profileOf(st.id).color}">${profileOf(st.id).avatar}</span><b>${esc(st.name)}</b><select data-set-method="${st.id}">${opts(st.method)}</select></div><div class="muted small">${esc(st.email || '')} <button class="btn ghost sm" data-act="reset-pw" data-id="${st.id}">🔑 Reset password</button></div>
+      <div class="lab-grid">${learners.map(st => `<div class="lab-card"><div class="row"><span class="avatar sm" style="--pc:${profileOf(st.id).color}">${profileOf(st.id).avatar}</span><b>${esc(st.name)}</b><select data-set-method="${st.id}">${opts(st.method)}</select></div><div class="muted small">${esc(st.email || '')} ${(acctOf(st.id) || {}).cloud ? '' : `<button class="btn ghost sm" data-act="reset-pw" data-id="${st.id}">🔑 Reset password</button>`}</div>
         <div class="mstats">${ratingStats(st).map(x => `<div class="${x.m === st.method ? 'cur' : ''}"><span>${M.METHODS[x.m].icon} ${esc(M.METHODS[x.m].name)}</span><b>${x.avg == null ? '–' : x.avg.toFixed(1) + '★'}</b><small>${x.n} rating${x.n === 1 ? '' : 's'}</small></div>`).join('')}</div></div>`).join('')}</div>
       <h2>📚 The methods</h2><div class="methods">${M.ORDER.map(k => { const x = M.METHODS[k]; return `<div class="method"><h3>${x.icon} ${esc(x.name)}</h3><p>${esc(x.tagline)}</p><p class="muted small">🔬 ${esc(x.science)}</p></div>`; }).join('')}</div>
       <h2>🤖 Bigger changes</h2><p class="muted">Want the lessons themselves rewritten? Copy this report and paste it to Claude.</p><button class="btn ghost" data-act="claude-report">📋 Copy feedback report</button></div>`;
@@ -1034,6 +1079,12 @@
       case 'quick-acct': { authEmail = el.dataset.email; const f = $('#authform'); if (f) { f.email.value = authEmail; f.password.focus(); } return; }
       case 'toggle-pw': { const i = el.parentElement.querySelector('input'); i.type = i.type === 'password' ? 'text' : 'password'; return; }
       case 'reset-pw': return resetPassword(el.dataset.id);
+      case 'forgot-pw': {
+        const f = $('#authform'); const email = normEmail(f.email.value); const err = $('#ob-err');
+        if (!validEmail(email)) { err.textContent = 'Type your email first, then tap the reset link.'; return; }
+        try { await C.resetEmail(email); err.innerHTML = '<span class="good">📧 Sent! Check your email (and spam). Pick a new password there (it needs 6+ characters), then sign in with it.</span>'; }
+        catch (e2) { err.textContent = C.friendly(e2); } return;
+      }
       case 'toggle-track': { const set = new Set(S._pickTracks || S.tracks || []); set.has(el.dataset.id) ? set.delete(el.dataset.id) : set.add(el.dataset.id); S._pickTracks = [...set]; return renderTrackPicker(); }
       case 'save-tracks': { const list = TRACKS.map(t => t.id).filter(id => (S._pickTracks || S.tracks || []).includes(id)); if (!list.length) return; delete S._pickTracks; S.tracks = list; if (!list.includes(S.track)) S.track = list[0]; save(); document.body.classList.remove('no-shell'); return go('learn'); }
       case 'cancel-tracks': delete S._pickTracks; document.body.classList.remove('no-shell'); return go('progress');
@@ -1124,5 +1175,15 @@
   history.replaceState(null, '', location.pathname + location.search);
   let sid = ''; try { sid = sessionStorage.getItem(SESSKEY) || ''; } catch (e) { }
   sid = sid || storeGet(SESSKEY) || '';
-  if (sid && acctOf(sid)) enter(sid); else renderAuth();
+  if (C.enabled()) {
+    $('#app').innerHTML = `<div class="picker"><div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div><p class="muted">Loading…</p></div>`;
+    C.init().then(async user => {
+      if (user && (!sid || sid === user.uid)) {
+        try { const d = await C.load(user.uid); mergeCloudState(user.uid, d); const pr = (d && d.profile) || {}; if (pr.email) upsertAccount(Object.assign({ id: user.uid, cloud: true }, pr)); } catch (e) { }
+        if (acctOf(user.uid)) return enter(user.uid);
+      }
+      if (sid && acctOf(sid) && !(acctOf(sid) || {}).cloud) return enter(sid);
+      renderAuth();
+    }).catch(() => { if (sid && acctOf(sid)) enter(sid); else renderAuth(); }); // offline: use this device's copy
+  } else if (sid && acctOf(sid)) enter(sid); else renderAuth();
 })();

@@ -16,6 +16,10 @@ window.TQ_CONFIG = {
   // Invite-only testing: the online version asks for an invite code once per device (SHA-256 of the code).
   // Set to '' to open the app to everyone. Running it on your own PC (localhost) never asks.
   inviteHash: '734a25e2b6afc71e3ff532b79e1d81d45ff6d0390eba38f77437abf692b3f8a1',
+  // Online accounts (same account on every device). Paste the Firebase web config here, e.g.
+  // cloud: { apiKey: '...', authDomain: '....firebaseapp.com', projectId: '...', appId: '...' },
+  // Leave it as null to keep accounts saved on each device only.
+  cloud: null,
   // Teaching method every learner starts with (see js/methods.js): 'chat' | 'predict' | 'cards' | 'rush'
   defaultMethod: 'chat',
   // After each lesson, a rating BELOW this many stars makes the app ask "why?".
