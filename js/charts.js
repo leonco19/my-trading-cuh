@@ -72,26 +72,26 @@
     patterns: () => ({ candles: [C(105, 105.3, 103.6, 103.8), C(103.8, 104.1, 100.8, 103.9), C(103.9, 104.9, 103.6, 104.6), C(104.6, 104.8, 103.2, 103.4), C(103.4, 106.2, 103.1, 105.9), C(105.9, 106.8, 105, 105.95)], labels: { 1: 'Hammer', 4: 'Engulfing', 5: 'Doji' }, noVol: true }),
     uptrend: s => ({ candles: fromPath([[0, 100], [8, 103], [13, 101.6], [22, 105], [27, 103.7], [37, 107.5], [41, 106.4], [50, 109.6]], { seed: s || 11 }), noVwap: true }),
     downtrend: s => ({ candles: fromPath([[0, 110], [8, 107], [13, 108.4], [22, 105], [27, 106.3], [37, 102.6], [41, 103.7], [50, 100.2]], { seed: s || 12 }), noVwap: true }),
-    range: s => ({ candles: fromPath([[0, 100], [6, 103], [12, 100.2], [18, 102.9], [24, 100.1], [30, 103.1], [36, 100.3], [42, 102.8], [48, 101.5]], { seed: s || 13, uShape: false }), levels: [{ p: 103.1, label: 'Ceiling', color: '#ff4b4b' }, { p: 100.1, label: 'Floor', color: '#58cc02' }], noVwap: true }),
+    range: s => ({ candles: fromPath([[0, 100], [6, 103], [12, 100.2], [18, 102.9], [24, 100.1], [30, 103.1], [36, 100.3], [42, 102.8], [48, 101.5]], { seed: s || 13, uShape: false }), levels: [{ p: 103.1, label: 'Ceiling', color: '#ff4d6d' }, { p: 100.1, label: 'Floor', color: '#00d68f' }], noVwap: true }),
     'breakout-volume': s => {
       const cs = fromPath([[0, 100], [5, 101.8], [10, 100.4], [16, 101.9], [22, 100.6], [28, 101.8], [30, 103.6], [40, 105.5]], { seed: s || 14, uShape: false });
       cs.forEach((c, i) => { if (i === 29 || i === 30) c.v *= 5; else if (i < 29) c.v *= 0.7; });
-      return { candles: cs, levels: [{ p: 102, label: 'Range high', color: '#ff9600' }], noVwap: true };
+      return { candles: cs, levels: [{ p: 102, label: 'Range high', color: '#ff8a3d' }], noVwap: true };
     },
-    sr: s => ({ candles: fromPath([[0, 78], [8, 81.9], [12, 80.4], [18, 81.95], [22, 80.7], [28, 83.6], [33, 82.05], [44, 85.5]], { seed: s || 15 }), levels: [{ p: 82, label: 'Prev. day high', color: '#ff9600' }], noVwap: true }),
+    sr: s => ({ candles: fromPath([[0, 78], [8, 81.9], [12, 80.4], [18, 81.95], [22, 80.7], [28, 83.6], [33, 82.05], [44, 85.5]], { seed: s || 15 }), levels: [{ p: 82, label: 'Prev. day high', color: '#ff8a3d' }], noVwap: true }),
     'vwap-bounce': s => ({ candles: fromPath([[0, 100], [12, 104.2], [22, 'V'], [24, 'V'], [38, 106.5], [44, 107.2]], { seed: s || 16 }) }),
     'vwap-reject': s => ({ candles: fromPath([[0, 100], [10, 96.5], [16, 'V'], [24, 96.9], [30, 'V'], [40, 95.2], [44, 94.8]], { seed: s || 17 }) }),
     'orb-up': s => {
       const cs = fromPath([[0, 100.4], [1, 101.0], [6, 100.75], [9, 101.0], [11, 101.6], [25, 103.3], [36, 104.1]], { seed: s || 18 });
       cs[0] = { o: 100.45, h: 101.2, l: 100.4, c: 101.1, v: cs[0].v * 2 };
       addVwap(cs);
-      return { candles: cs, levels: [{ p: 101.2, label: 'OR high', color: '#58cc02' }, { p: 100.4, label: 'OR low', color: '#ff4b4b' }], highlight: 0 };
+      return { candles: cs, levels: [{ p: 101.2, label: 'OR high', color: '#00d68f' }, { p: 100.4, label: 'OR low', color: '#ff4d6d' }], highlight: 0 };
     },
     'orb-fake': s => {
       const cs = fromPath([[0, 100.4], [3, 100.9], [5, 101.45], [7, 100.9], [12, 100.1], [20, 99.2], [30, 98.6]], { seed: s || 19 });
       cs[0] = { o: 100.45, h: 101.2, l: 100.4, c: 101.1, v: cs[0].v * 2 };
       addVwap(cs);
-      return { candles: cs, levels: [{ p: 101.2, label: 'OR high', color: '#58cc02' }, { p: 100.4, label: 'OR low / stop', color: '#ff4b4b' }], highlight: 0 };
+      return { candles: cs, levels: [{ p: 101.2, label: 'OR high', color: '#00d68f' }, { p: 100.4, label: 'OR low / stop', color: '#ff4d6d' }], highlight: 0 };
     },
   };
 
@@ -154,7 +154,7 @@
   }
 
   /* ---------- renderer ---------- */
-  const COLORS = { up: '#58cc02', down: '#ff4b4b', grid: 'rgba(255,255,255,0.06)', text: '#8ea3b5', vwap: '#ffc800', ema9: '#1cb0f6', ema20: '#ce82ff', bg: 'transparent' };
+  const COLORS = { up: '#00d68f', down: '#ff4d6d', grid: 'rgba(255,255,255,0.06)', text: '#8b93b8', vwap: '#ffb627', ema9: '#4c8dff', ema20: '#9b6bff', bg: 'transparent' };
 
   function draw(canvas, spec, opts) {
     if (!canvas || !canvas.isConnected) return null;
@@ -222,11 +222,11 @@
     // markers (entry/stop/target/exit)
     for (const mk of (opts.markers || [])) {
       if (mk.p == null) continue;
-      const col = { entry: '#1cb0f6', stop: '#ff4b4b', target: '#58cc02', draft: '#ffffff' }[mk.type] || '#fff';
+      const col = { entry: '#4c8dff', stop: '#ff4d6d', target: '#00d68f', draft: '#ffffff' }[mk.type] || '#fff';
       line(ctx, padL, W - padR, y(mk.p), col, mk.type === 'entry' ? [] : [4, 4], mk.label || mk.type, W - padR);
     }
     for (const t of (opts.trades || [])) {
-      if (t.entryBar != null) dot(ctx, x(t.entryBar), y(t.entry), t.dir > 0 ? '▲' : '▼', '#1cb0f6');
+      if (t.entryBar != null) dot(ctx, x(t.entryBar), y(t.entry), t.dir > 0 ? '▲' : '▼', '#4c8dff');
       if (t.exitBar != null) dot(ctx, x(t.exitBar), y(t.exit), '✕', t.r >= 0 ? COLORS.up : COLORS.down);
     }
     // time axis
@@ -239,7 +239,7 @@
     if (opts.hoverY != null && opts.hoverY > padT && opts.hoverY < padT + plotH) {
       const price = hi - (opts.hoverY - padT) / plotH * (hi - lo);
       ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(padL, opts.hoverY); ctx.lineTo(W - padR, opts.hoverY); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = '#2b3a47'; ctx.fillRect(W - padR + 1, opts.hoverY - 9, padR - 2, 18);
+      ctx.fillStyle = '#232b45'; ctx.fillRect(W - padR + 1, opts.hoverY - 9, padR - 2, 18);
       ctx.fillStyle = '#fff'; ctx.fillText(price.toFixed(2), W - padR + 5, opts.hoverY);
     }
     return { yToPrice: py => hi - (py - padT) / plotH * (hi - lo), priceToY: y };
@@ -249,11 +249,11 @@
   function path(ctx, pts, col, w) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); pts.forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.stroke(); }
   function line(ctx, x0, x1, yy, col, dash, label, lx) {
     ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke(); ctx.setLineDash([]);
-    if (label) { ctx.font = '10px Nunito, sans-serif'; const w = ctx.measureText(label).width + 8; ctx.fillStyle = col; ctx.globalAlpha = 0.9; ctx.fillRect(lx - w - 4, yy - 8, w, 16); ctx.globalAlpha = 1; ctx.fillStyle = '#0b1620'; ctx.fillText(label, lx - w, yy); ctx.font = '11px "JetBrains Mono", monospace'; }
+    if (label) { ctx.font = '10px "Space Grotesk", sans-serif'; const w = ctx.measureText(label).width + 8; ctx.fillStyle = col; ctx.globalAlpha = 0.9; ctx.fillRect(lx - w - 4, yy - 8, w, 16); ctx.globalAlpha = 1; ctx.fillStyle = '#0b0f1a'; ctx.fillText(label, lx - w, yy); ctx.font = '11px "JetBrains Mono", monospace'; }
   }
   function dot(ctx, xx, yy, ch, col) { ctx.fillStyle = col; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(ch, xx, yy); ctx.textAlign = 'left'; ctx.font = '11px "JetBrains Mono", monospace'; }
   function drawAnatomy(ctx, cs, x, y, cw) {
-    ctx.fillStyle = '#fff'; ctx.font = '12px Nunito, sans-serif';
+    ctx.fillStyle = '#fff'; ctx.font = '12px "Space Grotesk", sans-serif';
     const g = cs[0], r = cs[1];
     const lab = (t, xx, yy) => { ctx.fillText(t, xx, yy); };
     lab('← High (upper wick)', x(0) + cw * 0.45, y(g.h));

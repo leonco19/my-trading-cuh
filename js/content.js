@@ -9,7 +9,7 @@
 window.TQ_COURSE = [
   /* ───────────────────────── UNIT 0 ───────────────────────── */
   {
-    id: 'u0', title: 'Start Here', subtitle: 'The truth about day trading', color: '#58cc02', icon: '🚀',
+    id: 'u0', title: 'Start Here', subtitle: 'The truth about day trading', color: '#00d68f', icon: '🚀',
     lessons: [
       {
         id: 'u0l1', title: 'What is day trading?', icon: '📈', xp: 15,
@@ -54,10 +54,11 @@ window.TQ_COURSE = [
         id: 'u0l3', title: 'How this app works', icon: '🎮', xp: 10,
         cards: [
           { t: 'learn', title: 'Your path', html: `
-            <p>1. <b>Lessons</b> (this!) – short cards and quizzes. Earn XP, keep your streak 🔥.</p>
-            <p>2. <b>Arena</b> – a chart simulator. Trade realistic market days with virtual money. Every trade is scored in <b>R</b> (you'll learn this soon).</p>
-            <p>3. <b>Coach</b> – ask questions any time.</p>
-            <p>4. <b>News</b> – learn how real events (earnings, IPOs, bankruptcies, interest rates) move markets.</p>`},
+            <p>1. <b>Lessons</b> (this!): short sessions taught in different styles (chat, guess-first, deep dive or a timed rush). Every XP you earn raises <b>your own stock</b> 📈, and learning every day gives you <b>green days</b> 🟢.</p>
+            <p>2. <b>Arena</b>: a chart simulator. Trade realistic market days with virtual money. Every trade is scored in <b>R</b> (you'll learn this soon).</p>
+            <p>3. <b>Bro</b> 😎: ask your coach questions any time.</p>
+            <p>4. <b>News</b>: learn how real events (earnings, IPOs, bankruptcies, interest rates) move markets.</p>
+            <p>5. <b>Rate every lesson</b> ⭐: if a teaching style isn't working for you, say why, and the app will ask to switch it.</p>`},
           { t: 'learn', title: 'The 3 golden rules (we\'ll enforce them)', html: `
             <div class="rule">🛑 <b>1. Every trade has a stop-loss.</b> The Arena won't even let you enter without one.</div>
             <div class="rule">🎯 <b>2. Risk a tiny, fixed % per trade</b> (usually 0.5–1% of the account).</div>
@@ -70,7 +71,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── UNIT 1 ───────────────────────── */
   {
-    id: 'u1', title: 'Market Mechanics', subtitle: 'How the machine actually works', color: '#1cb0f6', icon: '⚙️',
+    id: 'u1', title: 'Market Mechanics', subtitle: 'How the machine actually works', color: '#4c8dff', icon: '⚙️',
     lessons: [
       {
         id: 'u1l1', title: 'Stocks, exchanges & indices', icon: '🏛️', xp: 15,
@@ -139,7 +140,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── UNIT 2 ───────────────────────── */
   {
-    id: 'u2', title: 'Reading Charts', subtitle: 'Speak the language of price', color: '#ce82ff', icon: '🕯️',
+    id: 'u2', title: 'Reading Charts', subtitle: 'Speak the language of price', color: '#9b6bff', icon: '🕯️',
     lessons: [
       {
         id: 'u2l1', title: 'Candlesticks 101', icon: '🕯️', xp: 15,
@@ -194,7 +195,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── UNIT 3 ───────────────────────── */
   {
-    id: 'u3', title: 'Levels & Indicators', subtitle: 'Where professionals act', color: '#ff9600', icon: '📐',
+    id: 'u3', title: 'Levels & Indicators', subtitle: 'Where professionals act', color: '#ff8a3d', icon: '📐',
     lessons: [
       {
         id: 'u3l1', title: 'Support & resistance', icon: '🧱', xp: 20,
@@ -247,7 +248,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── UNIT 4 ───────────────────────── */
   {
-    id: 'u4', title: 'Risk Management', subtitle: '⭐ The unit that matters most', color: '#ff4b4b', icon: '🛡️',
+    id: 'u4', title: 'Risk Management', subtitle: '⭐ The unit that matters most', color: '#ff4d6d', icon: '🛡️',
     lessons: [
       {
         id: 'u4l1', title: 'The 1% rule & position sizing', icon: '🧮', xp: 25,
@@ -477,7 +478,7 @@ window.TQ_COURSE = [
 
   /* ───────────────────────── UNIT 8 ───────────────────────── */
   {
-    id: 'u8', title: 'Your Trading Plan', subtitle: '🎓 Graduation', color: '#ffc800', icon: '🎓',
+    id: 'u8', title: 'Your Trading Plan', subtitle: '🎓 Graduation', color: '#ffb627', icon: '🎓',
     lessons: [
       {
         id: 'u8l1', title: 'Write your plan', icon: '📝', xp: 20,
@@ -518,10 +519,171 @@ window.TQ_COURSE = [
       },
     ]
   },
+
+  /* ───────────────────────── SEASON 9: SWING TRADING ───────────────────────── */
+  {
+    id: 'u9', free: true, title: 'Swing Trading', subtitle: 'Hold for days to weeks, not minutes', color: '#22d3ee', icon: '🌊',
+    lessons: [
+      {
+        id: 'u9l1', title: 'What is swing trading?', icon: '🏄', xp: 15,
+        cards: [
+          { t: 'learn', title: 'Catching the swing', html: `
+            <p><b>Swing trading</b> means holding a position for <b>a few days to a few weeks</b> to catch one "swing": a single move up or down inside a bigger trend.</p>
+            <table class="tbl"><tr><th></th><th>Day trading</th><th>Swing trading</th><th>Investing</th></tr>
+            <tr><td>Holding time</td><td>Minutes–hours</td><td>Days–weeks</td><td>Years</td></tr>
+            <tr><td>Main chart</td><td>1–5 min</td><td>Daily (and 1-hour)</td><td>Weekly / the business itself</td></tr>
+            <tr><td>Screen time</td><td>Hours every day</td><td>~30 min a day</td><td>A few hours a year</td></tr>
+            <tr><td>Overnight risk</td><td>None (you're flat)</td><td><b>Yes</b></td><td>Yes, but you ride it out</td></tr></table>
+            <div class="callout">🎒 Swing trading fits around school: you plan in the evening, set your orders, and check once a day.</div>` },
+          { t: 'learn', title: 'The big trade-off: gaps', html: `
+            <p>Because you hold overnight, news can hit while the market is closed. The stock can then <b>gap</b> past your stop at the next open.</p>
+            <p>Example: you're long at $50 with a stop at $47. Bad earnings come out after the close, and the stock opens at <b>$42</b>. Your stop fills near $42, not $47, so you lose much more than planned.</p>
+            <div class="rule">🛑 <b>Swing rule:</b> know the <b>earnings date</b> before you enter. Most swing traders close or shrink positions before earnings.</div>` },
+          { t: 'mcq', q: 'You buy on Monday and plan to sell next Thursday. What style is that?', opts: ['Day trading', 'Swing trading', 'Long-term investing', 'Scalping'], a: 1, why: 'Days to weeks = swing trading.' },
+          { t: 'tf', q: 'A stop-loss always protects a swing trader from losing more than planned.', a: false, why: 'If the stock gaps past your stop overnight, it fills at the next available price, which can be much worse. That\'s gap risk.' },
+          { t: 'mcq', q: 'What should a swing trader check before entering?', opts: ['The company logo', 'When the next earnings report is', 'What the stock did 10 years ago', 'Nothing, just enter'], a: 1, why: 'Earnings are the most common cause of big overnight gaps.' },
+        ]
+      },
+      {
+        id: 'u9l2', title: 'Trend + pullback', icon: '📐', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Buy the dip, but only in an uptrend', html: `
+            <p>The classic swing setup: find a stock in a <b>clear uptrend</b> on the daily chart (higher highs + higher lows, price above a rising 50-day moving average). Then wait for a <b>pullback</b> to a level where buyers stepped in before:</p>
+            <ul><li>the rising <b>20- or 50-day moving average</b></li><li>an old <b>resistance that became support</b></li></ul>
+            <p>Entry: when price stops falling and turns back up (e.g. a strong green daily candle). Stop: below the pullback low.</p>`, chart: { pattern: 'uptrend' } },
+          { t: 'learn', title: 'Why it works (when it does)', html: `
+            <p>Research on <b>momentum</b> (Jegadeesh & Titman, 1993, and many studies since) shows that stocks that went up over the past several months have tended to keep outperforming for a while. A pullback lets you join that trend at a better price, with a nearby stop.</p>
+            <div class="callout">⚠️ Momentum works on average, across many trades, and it has sudden crashes. It's an edge, not a guarantee. Keep your size small.</div>` },
+          { t: 'mcq', q: 'Which stock fits the pullback setup best?', opts: ['Falling for 3 months, below its 50-day MA', 'Rising for 3 months, dipping to its rising 50-day MA', 'Flat for a year with no volume', 'Jumped 200% this morning on a rumor'], a: 1, why: 'Uptrend + pullback to a rising moving average = the textbook swing entry.' },
+          { t: 'mcq', q: 'Where does the stop usually go?', opts: ['Just below the pullback low', 'At the all-time high', 'No stop, it\'s a long hold', '1 cent below entry'], a: 0, why: 'If price breaks the pullback low, the "buyers defend here" idea is wrong.' },
+          { t: 'tf', q: 'Buying a stock just because it fell a lot ("it\'s cheap now") is the same as a pullback trade.', a: false, why: 'A pullback is a dip INSIDE an uptrend. Buying a stock that keeps falling is catching a falling knife.' },
+        ]
+      },
+      {
+        id: 'u9l3', title: 'Sizing a swing trade', icon: '🧮', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Wider stops → fewer shares', html: `
+            <p>Swing stops are wider than day-trading stops because daily candles are bigger. The math is the one you already know:</p>
+            <div class="formula">Shares = (Account × Risk%) ÷ (Entry − Stop)</div>
+            <p>Example: $10,000 account, risk 1% = <b>$100</b>. Entry $50, stop $47 → $3 risk per share → <b>33 shares</b> (round down).</p>
+            <p>Many swing traders set the stop using the daily <b>ATR</b> (average daily range), e.g. 1.5–2× ATR below entry, so normal daily noise doesn't stop them out.</p>` },
+          { t: 'learn', title: 'Don\'t hold too many at once', html: `
+            <p>If you hold 6 swing trades and the whole market drops 3% overnight, they can <b>all</b> hit their stops together. Six "1% risks" become one 6% loss.</p>
+            <div class="rule">🎯 Keep your total open risk (all positions added up) at around <b>5% or less</b>, and avoid holding 4 stocks from the same sector.</div>` },
+          { t: 'num', q: 'Account $10,000, risk 1%, entry $50, stop $47. How many shares?', a: 33, tol: 0, suffix: 'shares', why: '$100 ÷ $3 = 33.3 → round DOWN to 33.' },
+          { t: 'num', q: 'Account $8,000, risk 0.5%, entry $20, stop $19. How many shares?', a: 40, tol: 0, suffix: 'shares', why: '0.5% × 8,000 = $40. $40 ÷ $1 = 40 shares.' },
+          { t: 'tf', q: 'Holding 5 tech stocks, each risking 1%, is like risking only 1% in total.', a: false, why: 'Similar stocks move together. If tech drops, they can all lose at once: about 5% total.' },
+        ]
+      },
+      {
+        id: 'u9l4', title: 'Managing the trade', icon: '🧭', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Plan the exit before the entry', html: `
+            <p>Write down three numbers before you buy: <b>entry</b>, <b>stop</b>, <b>target</b>. A common target is the last swing high, or 2–3R.</p>
+            <ul><li>📈 Price reaches +1R → many traders move the stop to <b>breakeven</b>.</li>
+            <li>🪜 Price keeps trending → <b>trail</b> the stop under each new higher low (or the 20-day MA).</li>
+            <li>⏳ Nothing happens for 1–2 weeks → consider a <b>time stop</b>: exit and free the money for a better setup.</li></ul>` },
+          { t: 'learn', title: 'The evening routine', html: `
+            <p>Swing trading has a calm rhythm, which suits students:</p>
+            <ol><li>After the US close (23:00 Israel time) or the next morning, scan daily charts for setups.</li>
+            <li>Check earnings dates and news.</li><li>Place orders (entry + stop) ahead of time.</li><li>Journal open trades once a day. No staring at 1-minute charts.</li></ol>` },
+          { t: 'mcq', q: 'Your swing trade is at +1R. What is a common next step?', opts: ['Double the position', 'Move the stop to breakeven', 'Remove the stop', 'Sell and jump into a random stock'], a: 1, why: 'Moving the stop to breakeven turns it into a "free" trade if it reverses.' },
+          { t: 'mcq', q: 'A trade has done nothing for two weeks. What is a "time stop"?', opts: ['Exiting because the idea didn\'t work in the time you expected', 'A stop that only works at night', 'Waiting forever', 'Adding more shares'], a: 0, why: 'If the move doesn\'t come, the idea was probably wrong. Free up the money.' },
+          { t: 'tf', q: 'Swing traders need to watch 1-minute charts all day.', a: false, why: 'Daily charts plus a short daily check are enough. That\'s the big advantage over day trading.' },
+        ]
+      },
+    ]
+  },
+
+  /* ───────────────────────── SEASON 10: INVESTING ───────────────────────── */
+  {
+    id: 'u10', free: true, title: 'Investing', subtitle: 'How real wealth gets built: slowly', color: '#a3e635', icon: '🌱',
+    lessons: [
+      {
+        id: 'u10l1', title: 'Compounding: the 8th wonder', icon: '❄️', xp: 15,
+        cards: [
+          { t: 'learn', title: 'Money that makes money', html: `
+            <p><b>Compounding</b> means your returns also earn returns. Here's $1,000 growing 10% a year:</p>
+            <table class="tbl"><tr><th>Year</th><th>Value</th></tr><tr><td>0</td><td>$1,000</td></tr><tr><td>1</td><td>$1,100</td></tr><tr><td>2</td><td>$1,210</td></tr><tr><td>10</td><td>≈ $2,594</td></tr><tr><td>30</td><td>≈ $17,449</td></tr><tr><td>50</td><td>≈ $117,391</td></tr></table>
+            <div class="callout good">⏰ <b>Time is your superpower.</b> At 17 you have ~50 years of compounding ahead. Someone starting at 40 can't buy that back.</div>` },
+          { t: 'learn', title: 'The Rule of 72', html: `
+            <p>Quick mental math: <b>72 ÷ yearly return = years to double</b>.</p>
+            <div class="formula">72 ÷ 8% = 9 years to double</div>
+            <p>For reference: the US stock market (S&P 500) has returned roughly <b>10% a year on average</b> over the last ~100 years, before inflation. But some single years were −30% or worse. The average hides a bumpy ride.</p>` },
+          { t: 'num', q: '$1,000 grows 10% per year. What is it worth after 2 years?', a: 1210, tol: 0.5, suffix: '$', why: '1,000 × 1.1 = 1,100, then × 1.1 again = 1,210. The extra $10 is interest on interest.' },
+          { t: 'num', q: 'Rule of 72: at 6% a year, how many years to double?', a: 12, tol: 0.01, suffix: 'years', why: '72 ÷ 6 = 12 years.' },
+          { t: 'tf', q: 'Starting 10 years earlier makes only a small difference over a lifetime.', a: false, why: 'Ten extra years at ~8% roughly doubles the final amount. Starting early is the biggest lever you have.' },
+        ]
+      },
+      {
+        id: 'u10l2', title: 'Index funds & ETFs', icon: '🧺', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Buy the whole haystack', html: `
+            <p>Instead of guessing which single stock wins, an <b>index fund</b> buys <b>all</b> the stocks in an index, like the 500 big US companies in the <b>S&P 500</b>, or Israel's <b>TA-35 / TA-125</b>.</p>
+            <ul><li>🧺 <b>Diversified:</b> one company going bankrupt barely matters.</li><li>💸 <b>Cheap:</b> fees can be under 0.1% a year.</li><li>📊 <b>Hard to beat:</b> S&P's SPIVA reports show that over 15+ years, about <b>90% of professional US fund managers trail</b> the index.</li></ul>
+            <p>An <b>ETF</b> is a fund that trades on the exchange like a stock.</p>` },
+          { t: 'learn', title: 'Fees are silent killers', html: `
+            <p>A fund's yearly fee is called the <b>expense ratio</b>. It sounds tiny, but it compounds against you.</p>
+            <div class="formula">$10,000 × 1% = $100 every year</div>
+            <p>Over 30 years, a 1% fee instead of a 0.1% fee can eat roughly <b>a quarter</b> of your final money. Always check the fee before you buy a fund.</p>` },
+          { t: 'mcq', q: 'What does an S&P 500 index fund hold?', opts: ['The 5 best stocks', 'About 500 large US companies', 'Only tech stocks', 'Gold and bonds'], a: 1, why: 'It tracks the whole index: about 500 large US companies.' },
+          { t: 'num', q: 'You invest $10,000 in a fund with a 0.5% expense ratio. What is the yearly fee in dollars?', a: 50, tol: 0.01, suffix: '$', why: '10,000 × 0.005 = $50 a year.' },
+          { t: 'tf', q: 'Most professional fund managers beat the index over 15+ years.', a: false, why: 'The opposite: around 90% of active US large-cap funds trail the S&P 500 over 15 years (SPIVA).' },
+        ]
+      },
+      {
+        id: 'u10l3', title: 'Risk, crashes & patience', icon: '🎢', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Crashes are part of the deal', html: `
+            <p>Stocks pay more than a savings account <b>because</b> they're scary sometimes:</p>
+            <ul><li>📉 2008 financial crisis: the S&P 500 fell about <b>55%</b> from its peak.</li><li>🦠 March 2020 (COVID): about <b>34%</b> down in a month, then back to new highs within months.</li></ul>
+            <p>People who sold in panic locked in the loss. People who kept buying got the recovery.</p>
+            <div class="callout">🧠 The biggest investing danger is usually <b>your own behavior</b>, not the market.</div>` },
+          { t: 'learn', title: 'Dollar-cost averaging (DCA)', html: `
+            <p><b>DCA</b> = investing a fixed amount on a schedule (e.g. ₪200 every month), no matter what the market does.</p>
+            <ul><li>When prices are low, your ₪200 buys <b>more</b> units.</li><li>You never have to "time the market".</li><li>It turns investing into a boring habit, and boring wins.</li></ul>
+            <p>Also: only invest money you won't need for <b>5+ years</b>. Money for next year's driving lessons stays in savings.</p>` },
+          { t: 'mcq', q: 'Your index fund drops 25% in a crash. You won\'t need the money for 20 years. Historically, the worst move was usually…', opts: ['Keep investing monthly', 'Do nothing', 'Panic-sell everything', 'Read about past crashes'], a: 2, why: 'Selling in a crash locks in the loss and usually misses the recovery.' },
+          { t: 'mcq', q: 'What is dollar-cost averaging?', opts: ['Buying only when the price is lowest', 'Investing a fixed amount on a regular schedule', 'Converting dollars to shekels', 'Selling a little every month'], a: 1, why: 'Fixed amount, fixed schedule, no market timing.' },
+          { t: 'tf', q: 'Money you need in 6 months should go into stocks for the best return.', a: false, why: 'Stocks can drop 30% in a few months. Short-term money belongs in savings.' },
+        ]
+      },
+      {
+        id: 'u10l4', title: 'Investing from Israel 🇮🇱', icon: '🏦', xp: 20,
+        cards: [
+          { t: 'learn', title: 'You might already be an investor', html: `
+            <p>Through <b>Savings for Every Child (חיסכון לכל ילד)</b>, Bituach Leumi has deposited a monthly amount for you since you were born, and your parents may have added the same amount again. The money is invested in a track at a kupat gemel or a bank.</p>
+            <ul><li>👉 Ask your parents which <b>track</b> (risk level) it's in. Higher-risk tracks hold more stocks.</li><li>🎂 You can withdraw at 18, but leaving it invested keeps it compounding (and there has been a bonus for waiting until 21).</li></ul>` },
+          { t: 'learn', title: 'Tools Israelis use (from 18)', html: `
+            <ul><li>🧺 <b>Index funds/ETFs</b> through an Israeli bank or broker: on the TASE, or on foreign exchanges.</li>
+            <li>📦 <b>Kupat gemel le'hashka'a (קופת גמל להשקעה)</b>: a long-term savings fund with tax benefits if you take the money as a pension later.</li>
+            <li>🧾 <b>Tax:</b> generally <b>25%</b> on the real (inflation-adjusted) gain when you sell. This isn't tax advice and rules change, so check with an adult or an accountant.</li></ul>
+            <div class="callout">🔐 Under 18 you can't open your own account, but you <i>can</i> learn, practice, and talk with your parents about your Savings for Every Child track.</div>` },
+          { t: 'mcq', q: 'What is "Savings for Every Child"?', opts: ['A crypto app', 'A government program that saves and invests money for every Israeli child', 'A bank loan for teens', 'A school fundraiser'], a: 1, why: 'Bituach Leumi deposits a monthly amount for every child, invested in a fund until they grow up.' },
+          { t: 'mcq', q: 'In Israel, gains from selling stocks are generally taxed at about…', opts: ['0%', '10%', '25% of the real gain', '50% of everything'], a: 2, why: 'Generally 25% of the real gain (special cases differ, so check with an accountant).' },
+          { t: 'tf', q: 'Investing and trading can live together: many traders keep their long-term money in index funds.', a: true, why: 'Exactly. Many pros trade with a small part of their money and invest the rest for the long term.' },
+        ]
+      },
+    ]
+  },
 ];
 
 /* Glossary for the coach and the tooltips */
 window.TQ_GLOSSARY = {
+  'swing trading': 'Swing trading = holding a position for days to weeks to catch one move inside a trend. Uses daily charts and wider stops, and carries overnight gap risk. (Season: Swing Trading)',
+  'swing': 'Swing trading = holding a position for days to weeks to catch one move inside a trend. (Season: Swing Trading)',
+  'pullback': 'A pullback is a temporary dip inside an uptrend, often to a rising moving average or old resistance turned support.',
+  'momentum': 'Momentum: stocks that rose over the last several months have tended to keep outperforming for a while (Jegadeesh & Titman, 1993). It works on average, with occasional sharp crashes.',
+  'investing': 'Investing = owning assets for years and letting compounding work. For most people, low-fee diversified index funds are the core. (Season: Investing)',
+  'index fund': 'An index fund buys all the stocks in an index (like the S&P 500 or TA-125). Diversified, cheap, and hard to beat over the long run.',
+  'compounding': 'Compounding = returns earning returns. $1,000 at 10%/yr is about $2,594 after 10 years and about $17,449 after 30.',
+  'compound interest': 'Compounding = returns earning returns. Rule of 72: 72 ÷ yearly return = years to double.',
+  'rule of 72': 'Rule of 72: divide 72 by the yearly return to get roughly how many years it takes to double. 72 ÷ 8 = 9 years.',
+  'dca': 'Dollar-cost averaging: invest a fixed amount on a fixed schedule, whatever the price. No market timing needed.',
+  'dollar cost averaging': 'Dollar-cost averaging: invest a fixed amount on a fixed schedule, whatever the price.',
+  'expense ratio': 'The yearly fee a fund charges, as a % of your money. 0.5% on $10,000 = $50 per year. Lower is better.',
+  'diversification': 'Diversification = spreading money across many assets so one failure can\'t sink you. An index fund is instant diversification.',
+  'savings for every child': 'Savings for Every Child: Bituach Leumi deposits a monthly amount for every Israeli child into an invested savings account, available from 18.',
   'vwap': 'VWAP (Volume-Weighted Average Price) is the average price paid today, weighted by volume. It resets daily. Above VWAP = buyers in control, below = sellers. Institutions benchmark their fills against it. (Lesson: Levels & Indicators → VWAP)',
   'orb': 'Opening Range Breakout: mark the high/low of the first 5–30 minutes, trade the break in the direction of the first candle, stop at the other side, exit by the close. Studied by Zarattini & Aziz (2023/2024). Strongest on Stocks in Play. (Lesson: Strategies → ORB)',
   'opening range': 'The opening range is the high and low of the first N minutes after the open (often 5, 15 or 30). See ORB.',
@@ -564,3 +726,272 @@ window.TQ_GLOSSARY = {
   'fomo': 'Fear of missing out: chasing a move that already happened. Missing a trade costs $0, chasing one costs money.',
   'revenge': 'Revenge trading is forcing trades to win back a loss. The #1 account killer. Respect your daily max loss.',
 };
+
+/* ═══════════════════════════ LEARNING TRACKS ═══════════════════════════
+ * A learner picks one or more tracks. Each track is an ordered list of seasons (units).
+ * Seasons can be shared between tracks (e.g. Risk Management): finishing a lesson once counts everywhere.
+ * New track-only seasons are added to TQ_COURSE below.
+ */
+window.TQ_COURSE.push(
+  /* ───────────── SWING TRADING ───────────── */
+  {
+    id: 's2', title: 'Swing Playbook', subtitle: 'Breakouts, exits & market regime', color: '#15aabf', icon: '🎯',
+    lessons: [
+      {
+        id: 's2l2', title: 'Base breakouts', icon: '🚀', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Tight range → explosive move', html: `
+            <p>A <b>base</b> is a period of sideways movement (weeks), often after a run-up. When price breaks above the top of the base <b>on strong volume</b>, a new leg up often starts.</p>
+            <ul><li>✅ Base: at least 3–4 weeks, getting tighter toward the end</li><li>✅ Breakout day: closes above the range high, volume clearly above average</li><li>🛑 Stop: back inside the base (below the breakout level or the last tight low)</li></ul>
+            <div class="callout">⚠️ Many breakouts fail. The edge comes from <b>small losses on the failures</b> and letting the winners run for 2R, 3R or more.</div>`, chart: { pattern: 'breakout-volume' } },
+          { t: 'mcq', q: 'What confirms a breakout best?', opts: ['Low volume', 'A close above the range high on strong volume', 'A tweet', 'The price being a round number'], a: 1, why: 'High volume shows real demand. Low-volume breakouts fail more often.' },
+          { t: 'tf', q: 'If most breakouts fail, the setup can\'t be profitable.', a: false, why: 'With a 40% win rate and an average win of 3R vs. a loss of 1R, expectancy is 0.4×3 − 0.6×1 = +0.6R per trade.' },
+          { t: 'num', q: 'Win rate 40%, average win 3R, average loss 1R. What is the expectancy in R per trade?', a: 0.6, tol: 0.01, suffix: 'R', why: '0.4 × 3 − 0.6 × 1 = 1.2 − 0.6 = 0.6R.' },
+        ]
+      },
+      {
+        id: 's3l1', title: 'Targets & trailing stops', icon: '🪜', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Three ways to exit a winner', html: `
+            <div class="rule">🎯 <b>Fixed target:</b> sell at a planned level (for example 2R or the next resistance).</div>
+            <div class="rule">🪜 <b>Trailing stop:</b> move the stop up as price rises, for example under each new higher low, or under the 20-day MA. You let the trend decide when you exit.</div>
+            <div class="rule">✂️ <b>Scale out:</b> sell half at 2R, trail the rest. You lock in some profit and keep a piece for a big run.</div>
+            <div class="callout">Never move a stop <b>further away</b> to "give it room". Stops only move in the direction of your profit.</div>` },
+          { t: 'mcq', q: 'You\'re long and the stock makes a new higher low. With a trailing-stop plan you…', opts: ['Move the stop up under the new higher low', 'Move the stop down to give it room', 'Remove the stop', 'Double the position'], a: 0, why: 'Trailing stops follow the trend up and lock in gains.' },
+          { t: 'tf', q: 'Moving your stop further away when price gets close to it is a good way to avoid losses.', a: false, why: 'It turns a small planned loss into a big unplanned one. Stops only move toward profit.' },
+          { t: 'mcq', q: 'What\'s the main benefit of scaling out (half at target, trail the rest)?', opts: ['Zero risk', 'Locks some profit while keeping upside on a big move', 'Higher commissions', 'You never lose'], a: 1, why: 'It\'s a compromise between taking profits and letting winners run.' },
+        ]
+      },
+      {
+        id: 's3l2', title: 'Market regime & your swing plan', icon: '🌡️', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Trade with the tide', html: `
+            <p>Most stocks follow the overall market. Long swing setups work much better when the <b>index</b> (S&P 500 / Nasdaq) is in an uptrend, for example above its 50-day MA.</p>
+            <ul><li>🟢 Index trending up → normal size, focus on long setups</li><li>🟡 Choppy → smaller size, fewer trades</li><li>🔴 Index in a downtrend → mostly cash, or short setups if you know them</li></ul>
+            <div class="callout good">📝 Your swing plan: the setups you trade, max risk per trade (e.g. 0.5–1%), max open positions (e.g. 3–5), earnings rule, exit rule, and a weekly review.</div>` },
+          { t: 'mcq', q: 'The S&P 500 just fell below its 50-day MA and is making lower lows. A smart swing trader…', opts: ['Goes all-in on long breakouts', 'Cuts size and trades less, or waits in cash', 'Removes all stops', 'Ignores the index'], a: 1, why: 'When the tide goes out, most long setups fail. Cash is a position.' },
+          { t: 'tf', q: 'Holding cash and taking no trades can be the right decision.', a: true, why: 'Not trading in bad conditions protects your account and your confidence.' },
+          { t: 'mcq', q: 'Why limit the number of open positions (e.g. max 4)?', opts: ['So one bad market day can\'t hit 15 positions at once', 'Brokers forbid more', 'It looks professional', 'No reason'], a: 0, why: 'Stocks move together in a sell-off. Limiting positions limits total risk.' },
+        ]
+      },
+    ]
+  },
+
+  /* ───────────── INVESTING ───────────── */
+  {
+    id: 'i1', title: 'Investing 101', subtitle: 'Let money work for years', color: '#2f9e44', icon: '🏦',
+    lessons: [
+      {
+        id: 'i1l1', title: 'What is investing?', icon: '🌱', xp: 15,
+        cards: [
+          { t: 'learn', title: 'Owning, not betting', html: `
+            <p><b>Investing</b> means buying assets you plan to hold for <b>years</b>, like shares in companies, funds or bonds, so your money grows with the economy and with company profits.</p>
+            <p>A trader asks "where will the price be in an hour?" An investor asks "will this be worth more in 10 years?"</p>
+            <div class="callout">📊 Historically the US stock market (S&P 500) returned around <b>10% a year on average</b> over the long run, before inflation. Some years were −30%, some +30%. The average only shows up if you <b>stay in</b>.</div>` },
+          { t: 'learn', title: 'The main asset types', html: `
+            <table class="tbl"><tr><th>Asset</th><th>What it is</th><th>Risk / return</th></tr>
+            <tr><td>💵 Cash / deposits</td><td>Money in the bank</td><td>Very low risk, low return (inflation eats it)</td></tr>
+            <tr><td>📜 Bonds</td><td>A loan to a government or company</td><td>Lower risk, moderate return</td></tr>
+            <tr><td>📈 Stocks</td><td>Pieces of companies</td><td>Higher risk, higher long-term return</td></tr>
+            <tr><td>🧺 Funds / ETFs</td><td>Baskets of many stocks or bonds</td><td>Risk spread out</td></tr></table>` },
+          { t: 'mcq', q: 'Which is the investor\'s question?', opts: ['Will it bounce off VWAP in 5 minutes?', 'Will this be worth more in 10 years?', 'Will it gap up tomorrow?', 'What\'s the bid/ask right now?'], a: 1, why: 'Investors think in years and focus on long-term value.' },
+          { t: 'tf', q: 'Over the long run, stocks have historically returned more than cash in the bank, with bigger ups and downs.', a: true, why: 'Higher expected return comes with higher short-term volatility. That\'s the trade-off.' },
+          { t: 'mcq', q: 'A bond is basically…', opts: ['A piece of a company', 'A loan you give to a government or company', 'A crypto token', 'A type of savings app'], a: 1, why: 'Bondholders lend money and get interest plus their money back at the end (if the borrower doesn\'t default).' },
+        ]
+      },
+      {
+        id: 'i1l3', title: 'Inflation & real returns', icon: '🎈', xp: 15,
+        cards: [
+          { t: 'learn', title: 'Why cash slowly loses', html: `
+            <p><b>Inflation</b> = prices going up over time. If inflation is 3%, ₪100 buys about 3% less stuff next year.</p>
+            <div class="formula">Real return ≈ Your return − Inflation</div>
+            <p>A savings account paying 2% when inflation is 3% is a <b>−1% real return</b>: you're getting poorer slowly, even though the number goes up.</p>` },
+          { t: 'num', q: 'Your investment made 8% this year and inflation was 3%. Roughly what is your real return?', a: 5, tol: 0.1, suffix: '%', why: '8% − 3% ≈ 5% real.' },
+          { t: 'tf', q: 'Keeping all your savings in cash for 30 years is "zero risk".', a: false, why: 'It has inflation risk: the money keeps losing buying power.' },
+          { t: 'mcq', q: 'Bank pays 1.5%, inflation is 3%. Your real return is about…', opts: ['+4.5%', '+1.5%', '−1.5%', '0%'], a: 2, why: '1.5% − 3% = −1.5% real.' },
+        ]
+      },
+    ]
+  },
+  {
+    id: 'i3', title: 'Your Portfolio', subtitle: 'Diversify, rebalance, read a company', color: '#2b8a3e', icon: '🧩',
+    lessons: [
+      {
+        id: 'i3l1', title: 'Diversification & risk', icon: '🧩', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Don\'t put all your eggs in one basket', html: `
+            <p><b>Diversification</b> = spreading money across many companies, sectors, countries and asset types, so one disaster can't wipe you out.</p>
+            <p>Your <b>stock/bond mix</b> is your biggest risk decision. A young investor with decades ahead can usually hold more stocks. Someone who needs the money in 2 years should hold much less.</p>
+            <div class="callout">🚨 Single stocks can go to zero (think Enron, Lehman Brothers, or SVB in 2023). A global index fund basically can't, because it holds thousands of companies.</div>` },
+          { t: 'mcq', q: 'Which portfolio is most diversified?', opts: ['100% in one Israeli bank stock', 'A global index fund holding thousands of companies', '3 tech stocks', 'One crypto coin'], a: 1, why: 'Thousands of companies in many countries = no single point of failure.' },
+          { t: 'tf', q: 'Money you need for something in 6 months should be in volatile stocks.', a: false, why: 'Stocks can drop 30% in months. Short-term money belongs in low-risk places.' },
+          { t: 'mcq', q: 'Your target is 80% stocks / 20% bonds. After a great year it\'s 90/10. Rebalancing means…', opts: ['Selling some stocks and buying bonds to get back to 80/20', 'Buying more stocks', 'Doing nothing ever', 'Selling everything'], a: 0, why: 'Rebalancing keeps your risk at the level you chose, and automatically "sells high, buys low".' },
+        ]
+      },
+      {
+        id: 'i3l3', title: 'Valuation basics', icon: '🔍', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Price vs. value', html: `
+            <p>If you ever buy single stocks, learn a few basics first:</p>
+            <ul><li><b>Market cap</b> = share price × number of shares. It's what the market thinks the whole company is worth.</li>
+            <li><b>Earnings (profit)</b>: what's left after all costs.</li>
+            <li><b>P/E ratio</b> = price ÷ earnings per share. A P/E of 20 means you pay ₪20 for every ₪1 of yearly profit.</li>
+            <li><b>Dividend</b>: part of the profit paid to shareholders in cash.</li></ul>
+            <div class="callout">A high P/E isn't "bad". It means investors expect fast growth. But if the growth doesn't come, the price can fall hard.</div>` },
+          { t: 'num', q: 'A stock trades at $60 and earns $3 per share per year. What is its P/E ratio?', a: 20, tol: 0.01, suffix: '', why: '60 ÷ 3 = 20.' },
+          { t: 'num', q: 'A company has 1,000,000 shares at ₪50 each. What is its market cap in ₪?', a: 50000000, tol: 1, suffix: '₪', why: '1,000,000 × 50 = ₪50,000,000.' },
+          { t: 'tf', q: 'A low share price (e.g. $2) means the stock is cheap.', a: false, why: 'Price alone means nothing. You compare it to earnings, assets and growth. A $2 stock can be very expensive.' },
+        ]
+      },
+    ]
+  },
+
+  /* ───────────── CRYPTO ───────────── */
+  {
+    id: 'c1', title: 'Bitcoin & Blockchain', subtitle: 'What crypto actually is', color: '#f59f00', icon: '₿',
+    lessons: [
+      {
+        id: 'c1l1', title: 'What is Bitcoin?', icon: '₿', xp: 15,
+        cards: [
+          { t: 'learn', title: 'Digital money with no boss', html: `
+            <p><b>Bitcoin</b> is a digital currency that no bank or government controls. It was described in a 2008 paper by someone using the name <b>Satoshi Nakamoto</b> (nobody knows who that really is), and launched in <b>January 2009</b>.</p>
+            <ul><li>🔢 There will only ever be <b>21 million</b> bitcoin</li><li>🌍 Anyone can send it to anyone, 24/7</li><li>🧾 Every transaction is recorded on a public ledger: the <b>blockchain</b></li></ul>` },
+          { t: 'learn', title: 'The halving', html: `
+            <p>New bitcoin are created as a reward for "miners" who secure the network. About every <b>4 years</b> (every 210,000 blocks) that reward is cut in half. This is the <b>halving</b>. The most recent one was in <b>April 2024</b>.</p>
+            <div class="callout">Fixed supply + halvings are why some people call Bitcoin "digital gold". Others see it as pure speculation. As a trader, what matters is that it's <b>extremely volatile</b>.</div>` },
+          { t: 'mcq', q: 'What is the maximum number of bitcoin that will ever exist?', opts: ['1 million', '21 million', '100 million', 'Unlimited'], a: 1, why: 'The supply cap is 21 million BTC, built into the code.' },
+          { t: 'tf', q: 'Bitcoin is controlled by a central bank that can print more.', a: false, why: 'No central authority controls Bitcoin. New coins only come from mining, on a fixed schedule.' },
+          { t: 'mcq', q: 'What happens at a Bitcoin "halving"?', opts: ['The price halves', 'The reward for mining new blocks is cut in half', 'Half the coins are deleted', 'Trading stops for a day'], a: 1, why: 'The block reward halves about every 4 years, which slows down new supply.' },
+        ]
+      },
+      {
+        id: 'c1l2', title: 'How a blockchain works', icon: '⛓️', xp: 20,
+        cards: [
+          { t: 'learn', title: 'A shared notebook nobody can erase', html: `
+            <p>Imagine a notebook of every payment ever made, copied on <b>thousands of computers</b> around the world. New pages (<b>blocks</b>) are added in order, each one linked to the previous one with cryptography. That chain of blocks is the <b>blockchain</b>.</p>
+            <p>To change an old payment, you would have to redo that block and every block after it, faster than the rest of the world combined. Practically impossible on a big network like Bitcoin.</p>` },
+          { t: 'learn', title: 'Proof of work vs. proof of stake', html: `
+            <table class="tbl"><tr><th></th><th>Proof of Work</th><th>Proof of Stake</th></tr>
+            <tr><td>Used by</td><td>Bitcoin</td><td>Ethereum (since "the Merge", 2022)</td></tr>
+            <tr><td>Who adds blocks</td><td>Miners using computing power</td><td>Validators who lock up ("stake") coins</td></tr>
+            <tr><td>Energy</td><td>Very high</td><td>Much lower</td></tr></table>` },
+          { t: 'mcq', q: 'Why is it so hard to change old transactions on the Bitcoin blockchain?', opts: ['A company guards it', 'Every block is linked to the previous one and copied on thousands of computers', 'It\'s stored in one secret place', 'It isn\'t hard at all'], a: 1, why: 'Linked blocks + massive decentralised copying make history practically impossible to rewrite.' },
+          { t: 'tf', q: 'Ethereum switched from proof of work to proof of stake in 2022.', a: true, why: 'That upgrade was called "the Merge" and cut Ethereum\'s energy use dramatically.' },
+          { t: 'mcq', q: 'In proof of stake, who adds new blocks?', opts: ['Miners with powerful GPUs', 'Validators who lock up coins as a deposit', 'The government', 'Banks'], a: 1, why: 'Validators put coins at stake. If they cheat, they can lose them.' },
+        ]
+      },
+      {
+        id: 'c1l3', title: 'Altcoins, stablecoins & tokens', icon: '🪙', xp: 15,
+        cards: [
+          { t: 'learn', title: 'Not all crypto is Bitcoin', html: `
+            <ul><li><b>Ethereum (ETH):</b> a blockchain that runs programs ("smart contracts"). Many apps and tokens are built on it.</li>
+            <li><b>Stablecoins (USDT, USDC):</b> tokens designed to stay at <b>$1</b>, backed by reserves. Used to move money between coins, but they depend on the issuer actually holding those reserves.</li>
+            <li><b>Altcoins:</b> thousands of other coins. Most of them fail. Many old "top 100" coins are worth almost nothing today.</li>
+            <li><b>Meme coins:</b> coins with no purpose except hype. Pure gambling, often with insiders dumping on new buyers.</li></ul>` },
+          { t: 'mcq', q: 'What is a stablecoin designed to do?', opts: ['Double every year', 'Stay at a fixed value, usually $1', 'Replace Bitcoin', 'Pay dividends'], a: 1, why: 'Stablecoins aim to hold a $1 peg, backed by reserves.' },
+          { t: 'tf', q: 'Most altcoins from past crypto booms still hold their value today.', a: false, why: 'The majority of coins from past booms lost most or all of their value.' },
+          { t: 'mcq', q: 'A brand-new meme coin is up 2,000% this week on TikTok hype. What\'s the biggest risk?', opts: ['None, it\'s trending', 'Insiders and early buyers dumping on late buyers (pump & dump)', 'It might be too stable', 'Taxes only'], a: 1, why: 'Hype coins are often pumped by insiders who sell to the newcomers. Late buyers are the exit liquidity.' },
+        ]
+      },
+    ]
+  },
+  {
+    id: 'c2', title: 'Crypto Markets', subtitle: '24/7, wild, and different', color: '#f08c00', icon: '🌐',
+    lessons: [
+      {
+        id: 'c2l1', title: 'A market that never sleeps', icon: '🌐', xp: 20,
+        cards: [
+          { t: 'learn', title: 'How crypto trades', html: `
+            <ul><li>⏰ <b>24/7/365:</b> no opening bell, no weekends off. Big moves can happen at 3 AM on a Sunday.</li>
+            <li>🏢 Traded on <b>exchanges</b> (like Coinbase, Kraken, Binance), many of them outside Israel.</li>
+            <li>🔁 <b>Pairs:</b> you trade BTC/USD, ETH/BTC, BTC/USDT… The first coin is what you buy, the second is what you pay with.</li>
+            <li>📈 Spot <b>Bitcoin ETFs</b> were approved in the US in January 2024, so you can now get BTC exposure through a normal broker too.</li></ul>
+            <div class="callout">🧠 Same chart skills (candles, support, volume) and the same risk rules apply. The market just never closes, so your stop-loss matters even more.</div>` },
+          { t: 'mcq', q: 'In the pair ETH/BTC, what are you buying when you buy?', opts: ['BTC, paying with ETH', 'ETH, paying with BTC', 'US dollars', 'Nothing'], a: 1, why: 'The first asset is the one you buy, the second is what you pay with.' },
+          { t: 'tf', q: 'Crypto markets close on weekends like the stock market.', a: false, why: 'Crypto trades 24/7, including weekends and holidays.' },
+          { t: 'mcq', q: 'Why does a stop-loss matter even more in crypto?', opts: ['Because the market never closes, and big moves can happen while you sleep', 'It doesn\'t matter', 'Crypto never moves', 'Exchanges ban stops'], a: 0, why: 'With no closing bell, you can\'t watch it all the time. Your stop protects you 24/7.' },
+        ]
+      },
+      {
+        id: 'c2l2', title: 'Volatility & drawdowns', icon: '🎢', xp: 20,
+        cards: [
+          { t: 'learn', title: 'The craziest rollercoaster in finance', html: `
+            <p>Bitcoin has had several crashes of <b>more than 70%</b> from its peak, for example in 2018 and again in 2022. Smaller coins often fall 90% or more and never come back.</p>
+            <div class="formula">After a −80% crash you need +400% just to get back to even</div>
+            <p>That's why position size matters even more here. A move that would be a crazy year for a stock can be a normal month for crypto.</p>` },
+          { t: 'num', q: 'A coin falls 75%. What % gain does it need to get back to its old price?', a: 300, tol: 0.5, suffix: '%', why: '$100 → $25. From $25 back to $100 is ×4, so +300%.' },
+          { t: 'tf', q: 'Bitcoin has never fallen more than 50% from a peak.', a: false, why: 'It has had multiple drawdowns of 70–85%.' },
+          { t: 'mcq', q: 'Because crypto is so volatile, a disciplined trader…', opts: ['Uses bigger size to profit more', 'Uses smaller size, so the same stop-loss still equals their fixed % risk', 'Skips the stop-loss', 'Only trades with leverage'], a: 1, why: 'Wider swings → wider stops → smaller positions. Your % risk per trade stays fixed.' },
+        ]
+      },
+      {
+        id: 'c2l3', title: 'Leverage & liquidations', icon: '💥', xp: 20,
+        cards: [
+          { t: 'learn', title: 'How crypto accounts blow up', html: `
+            <p>Many crypto exchanges offer <b>leverage</b> of 10×, 50×, even 100×. With 10× leverage, a <b>10% move against you</b> wipes out your whole deposit. The exchange automatically closes your position: a <b>liquidation</b>.</p>
+            <p>On big crash days, billions of dollars of leveraged positions get liquidated within hours.</p>
+            <div class="callout">🛑 Leverage doesn't make you a better trader. It just makes your mistakes bigger and faster. Our rule: <b>no leverage while learning</b>.</div>` },
+          { t: 'num', q: 'With 20× leverage, roughly how big a move against you (in %) wipes out your deposit?', a: 5, tol: 0.1, suffix: '%', why: '100% ÷ 20 = 5%. Crypto can move 5% in an hour.' },
+          { t: 'tf', q: 'A liquidation means the exchange force-closes your leveraged position when your losses use up your margin.', a: true, why: 'That\'s exactly it, and you lose the margin you put up.' },
+          { t: 'mcq', q: 'Your friend turned $200 into $2,000 with 50× leverage. What\'s the lesson?', opts: ['Leverage is free money', 'They got lucky, and the same trade the other way would have wiped them out in a 2% move', 'Use 100× next time', 'Leverage reduces risk'], a: 1, why: 'At 50×, a 2% move against you = liquidation. One lucky win says nothing about the risk.' },
+        ]
+      },
+    ]
+  },
+  {
+    id: 'c3', title: 'Crypto Safety 🇮🇱', subtitle: 'Wallets, scams, rules & taxes', color: '#e67700', icon: '🔐',
+    lessons: [
+      {
+        id: 'c3l1', title: 'Wallets & keys', icon: '🔑', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Not your keys, not your coins', html: `
+            <p>Crypto is controlled by a <b>private key</b>: a secret that proves ownership. Wallets often show it as a <b>seed phrase</b> of 12 or 24 words.</p>
+            <ul><li>🏦 <b>Custodial (on an exchange):</b> the exchange holds the keys. Easy, but if the exchange collapses, your coins can disappear. When <b>FTX</b> collapsed in November 2022, customers' money was frozen.</li>
+            <li>🔐 <b>Self-custody (your own wallet):</b> you hold the keys. Nobody can freeze it, but if you lose the seed phrase, the coins are gone forever.</li></ul>
+            <div class="rule">🚫 <b>Never</b> type your seed phrase into a website, never send it to anyone, never store it as a screenshot. Real support staff will <b>never</b> ask for it.</div>` },
+          { t: 'tf', q: '"Support" from an exchange messages you asking for your seed phrase to fix a problem. You should send it.', a: false, why: 'Anyone with your seed phrase owns your coins. Real support never asks for it. 100% a scam.' },
+          { t: 'mcq', q: 'What does "not your keys, not your coins" mean?', opts: ['If someone else holds the private keys, you depend on them to get your coins', 'Keys are physical metal keys', 'Coins expire', 'Nothing'], a: 0, why: 'On an exchange, you have a promise, not the coins themselves. FTX showed what that can mean.' },
+          { t: 'mcq', q: 'You lose the seed phrase of your self-custody wallet and your phone breaks. What happens?', opts: ['The bank restores it', 'The coins are most likely lost forever', 'Bitcoin support resets it', 'Nothing, it\'s backed up automatically'], a: 1, why: 'With self-custody there is no "forgot password". Back the seed phrase up offline, on paper or metal, somewhere safe.' },
+        ]
+      },
+      {
+        id: 'c3l2', title: 'Crypto scams', icon: '🎣', xp: 20,
+        cards: [
+          { t: 'learn', title: 'Crypto is a scammer\'s favourite', html: `
+            <p>Transactions can't be reversed, so scammers love crypto. The classics:</p>
+            <ul><li>🎁 <b>Fake giveaways:</b> "Send 0.1 BTC, get 0.2 back" (often with fake celebrity videos)</li>
+            <li>🧻 <b>Rug pulls:</b> devs hype a new token, then pull all the money out</li>
+            <li>💘 <b>"Pig butchering":</b> a friendly stranger online slowly convinces you to "invest" on a fake platform</li>
+            <li>📈 <b>Pump & dump groups</b> on Telegram and Discord</li>
+            <li>🕵️ <b>"Recovery" scams:</b> someone promises to get back money you lost… for a fee</li></ul>
+            <div class="callout">If someone you met online brings up crypto investing, it's a scam until proven otherwise.</div>` },
+          { t: 'tf', q: 'A crypto transaction sent to a scammer can usually be reversed by your bank.', a: false, why: 'Crypto transfers are generally final. That\'s why prevention is everything.' },
+          { t: 'mcq', q: 'An account using Elon Musk\'s photo says "send 1 ETH and get 2 ETH back". This is…', opts: ['A real promotion', 'A classic fake giveaway scam', 'An airdrop', 'A stablecoin'], a: 1, why: 'Nobody doubles your money. Fake celebrity giveaways are one of the oldest crypto scams.' },
+          { t: 'mcq', q: 'Someone you met on Instagram a few weeks ago shows you their huge profits on a "special platform" and invites you in. Best move?', opts: ['Start small to test it', 'Assume it\'s a scam, don\'t send anything, block and tell an adult', 'Send money to be polite', 'Ask them for a screenshot'], a: 1, why: 'That\'s the "pig butchering" pattern. Testing with small money is how they hook you.' },
+        ]
+      },
+      {
+        id: 'c3l3', title: 'Crypto in Israel: age & taxes', icon: '🧾', xp: 20,
+        cards: [
+          { t: 'learn', title: 'The rules (not tax advice!)', html: `
+            <ul><li>🔞 Real exchanges require you to be <b>18+</b> and verify your ID (KYC). Until then, practice in simulators only. Using someone else's account is not OK and breaks the exchange's rules.</li>
+            <li>🧾 The Israel Tax Authority treats crypto as an <b>asset</b>, not currency. Profit when you sell is generally taxed as a <b>capital gain (usually 25%)</b>, more for very high incomes.</li>
+            <li>🔁 Swapping one coin for another (e.g. BTC → ETH) can also count as a "sale" for tax purposes.</li>
+            <li>📁 Keep records of every buy, sell and swap. Very active trading can be treated as business income.</li></ul>
+            <p class="muted small">Rules change, so check gov.il or ask an accountant before you ever trade real money.</p>` },
+          { t: 'num', q: 'You bought crypto for ₪2,000 and sold it for ₪3,000. At a 25% capital gains rate, roughly how much tax (₪)?', a: 250, tol: 0.5, suffix: '₪', why: 'Gain = ₪1,000. 25% × 1,000 = ₪250.' },
+          { t: 'tf', q: 'In Israel, swapping BTC for ETH is never a taxable event because you didn\'t get shekels.', a: false, why: 'The Tax Authority\'s approach treats a coin-to-coin swap as a sale. Keep records of every swap.' },
+          { t: 'mcq', q: 'You\'re 17 and want to trade crypto. The right path is…', opts: ['Open an account with a parent\'s ID', 'Practice with virtual money now, learn the rules, and open your own account at 18', 'Use an exchange that skips ID checks', 'Buy from a stranger on Telegram'], a: 1, why: 'Practice now, real money later, on a regulated exchange in your own name.' },
+        ]
+      },
+    ]
+  }
+);
+
+/* Tracks: what a learner can choose to study. "units" is the ordered list of seasons in that track. */
+window.TQ_TRACKS = [
+  { id: 'day', name: 'Day Trading', icon: '⚡', color: '#4c8dff', desc: 'In and out the same day. Charts, levels, VWAP, the opening range, and strict risk.', units: ['u0', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8'] },
+  { id: 'swing', name: 'Swing Trading', icon: '🌊', color: '#22b8cf', desc: 'Hold for days or weeks. Daily charts, pullbacks and breakouts. Fits around school.', units: ['u9', 'u1', 'u2', 'u3', 'u4', 's2', 'u6', 'u7'] },
+  { id: 'invest', name: 'Investing', icon: '🏦', color: '#2f9e44', desc: 'Build wealth over years: compounding, index funds, fees, and Israeli savings tools.', units: ['i1', 'u10', 'i3', 'u1', 'u6', 'u7'] },
+  { id: 'crypto', name: 'Crypto & Bitcoin', icon: '₿', color: '#f59f00', desc: 'What Bitcoin and blockchains are, how 24/7 crypto markets move, and how to stay safe.', units: ['c1', 'c2', 'u2', 'u4', 'c3', 'u6'] },
+];

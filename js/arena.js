@@ -177,11 +177,11 @@
   function drawEquity(cv, eq) {
     if (!cv) return; const dpr = devicePixelRatio || 1; const W = cv.clientWidth, H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
     const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (eq.length < 2) { ctx.fillStyle = '#8ea3b5'; ctx.font = '13px Nunito'; ctx.fillText('Finish a trading day to start your equity curve.', 12, H / 2); return; }
+    if (eq.length < 2) { ctx.fillStyle = '#8b93b8'; ctx.font = '13px Nunito'; ctx.fillText('Finish a trading day to start your equity curve.', 12, H / 2); return; }
     const hi = Math.max(...eq), lo = Math.min(...eq), pad = (hi - lo) * 0.1 || 100;
     const x = i => 10 + i / (eq.length - 1) * (W - 20), y = v => 10 + (hi + pad - v) / (hi - lo + 2 * pad) * (H - 20);
     ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(0, y(eq[0])); ctx.lineTo(W, y(eq[0])); ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle = eq[eq.length - 1] >= eq[0] ? '#58cc02' : '#ff4b4b'; ctx.lineWidth = 2.5; ctx.beginPath(); eq.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))); ctx.stroke();
+    ctx.strokeStyle = eq[eq.length - 1] >= eq[0] ? '#00d68f' : '#ff4d6d'; ctx.lineWidth = 2.5; ctx.beginPath(); eq.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))); ctx.stroke();
   }
 
   function renderBrief() {
@@ -218,7 +218,7 @@
         <button class="btn ghost" data-arena="step" title="Next candle (→)">⏭ Next bar</button>
         <div class="speed">${[1, 2, 4].map(s => `<button class="chip-btn ${G.speed === s ? 'on' : ''}" data-arena="speed" data-v="${s}">${s}×</button>`).join('')}</div>
         <label class="small"><input type="checkbox" data-arena="ema" ${G.ema ? 'checked' : ''}> 9/20 EMA</label>
-        <span class="legend small"><i style="background:#ffc800"></i>VWAP <i style="background:#ff9600"></i>Levels</span>
+        <span class="legend small"><i style="background:#ffb627"></i>VWAP <i style="background:#ff8a3d"></i>Levels</span>
         <button class="btn ghost sm" data-arena="end">Finish day ⏩</button></div>
       <div class="panels">
       ${p ? `<div class="panel pos"><h3>${p.dir > 0 ? '🟢 LONG' : '🔴 SHORT'} ${p.shares} sh @ ${p.entry.toFixed(2)}</h3>
@@ -264,7 +264,7 @@
   function redraw() {
     const cv = document.getElementById('arenaChart'); if (!cv || !G) return;
     const d = G.day;
-    const spec = { candles: d.candles, levels: [{ p: d.pdh, label: 'PDH', color: '#ff9600' }, { p: d.pdl, label: 'PDL', color: '#ff9600' }, { p: d.prevClose, label: 'Prev close', color: '#8ea3b5' }, { p: d.candles[0].h, label: 'OR high', color: '#58cc0299' }, { p: d.candles[0].l, label: 'OR low', color: '#ff4b4b99' }] };
+    const spec = { candles: d.candles, levels: [{ p: d.pdh, label: 'PDH', color: '#ff8a3d' }, { p: d.pdl, label: 'PDL', color: '#ff8a3d' }, { p: d.prevClose, label: 'Prev close', color: '#8b93b8' }, { p: d.candles[0].h, label: 'OR high', color: '#00d68f99' }, { p: d.candles[0].l, label: 'OR low', color: '#ff4d6d99' }] };
     const markers = [];
     if (G.pos) { markers.push({ type: 'entry', p: G.pos.entry, label: 'Entry' }, { type: 'stop', p: G.pos.stop, label: 'Stop' }); if (G.pos.target != null) markers.push({ type: 'target', p: G.pos.target, label: 'Target' }); }
     else { const s = parseFloat(G.ticket.stop), tg = parseFloat(G.ticket.target); if (!isNaN(s)) markers.push({ type: 'stop', p: s, label: 'Stop?' }); if (!isNaN(tg)) markers.push({ type: 'target', p: tg, label: 'Target?' }); }
@@ -286,7 +286,7 @@
           <span>Followed my plan? <label><input type="radio" name="fol${k}" value="y"> Yes</label> <label><input type="radio" name="fol${k}" value="n"> No</label></span></div></div>`).join('')}`
         : `<div class="banner">${d.regime === 'range' ? '🧘 No trades on a chop day: that\'s a pro move. +5 bonus XP.' : 'No trades today. Sitting out is a valid decision, but make sure it was by choice and not fear.'}</div>`}
       <div class="row center"><button class="btn primary big" data-arena="journal">Save & collect XP</button></div></div>`;
-    requestAnimationFrame(() => { const cv = document.getElementById('sumChart'); if (cv) CH.draw(cv, { candles: d.candles, levels: [{ p: d.candles[0].h, label: 'OR high', color: '#58cc0299' }, { p: d.candles[0].l, label: 'OR low', color: '#ff4b4b99' }] }, { timeAxis: true, trades: G.trades }); });
+    requestAnimationFrame(() => { const cv = document.getElementById('sumChart'); if (cv) CH.draw(cv, { candles: d.candles, levels: [{ p: d.candles[0].h, label: 'OR high', color: '#00d68f99' }, { p: d.candles[0].l, label: 'OR low', color: '#ff4d6d99' }] }, { timeAxis: true, trades: G.trades }); });
   }
 
   /* ───────── events ───────── */

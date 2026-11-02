@@ -1,9 +1,10 @@
-/* My Trading Bro – main app (profiles, lessons, grading & mastery, review, coach, news, progress) */
+/* My Trading Bro – main app (profiles, lessons, teaching methods, ratings & Lab, review, coach, news, progress) */
 (function () {
   'use strict';
-  const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE;
+  const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods;
   const KEY = id => 'mtb:v1:' + id;
   const LAST = 'mtb:v1:lastProfile';
+  const LABKEY = 'mtb:v1:lab';
 
   /* ───────── utils ───────── */
   const $ = (s, el) => (el || document).querySelector(s);
@@ -12,6 +13,7 @@
   const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
   const fmt$ = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtR = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + 'R';
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
   function md(s) {
     return esc(s)
       .replace(/\[\[lesson:(\w+)\|([^\]]+)\]\]/g, '<a href="#" class="lesson-link" data-act="open-lesson" data-id="$1">📘 $2</a>')
@@ -21,64 +23,103 @@
   }
   function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function storeSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+  const b64e = o => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  const b64d = s => JSON.parse(decodeURIComponent(escape(atob(s.trim()))));
 
   /* ───────── course index ───────── */
   const LESSONS = [];
   COURSE.forEach((u, ui) => u.lessons.forEach((l, li) => LESSONS.push(Object.assign(l, { unit: u, ui, li, n: LESSONS.length }))));
   const LBYID = Object.fromEntries(LESSONS.map(l => [l.id, l]));
   const isQ = c => c.t !== 'learn';
-  const qCount = l => l.cards.filter(isQ).length;
 
   /* ───────── state ───────── */
   let S = null; // current profile state
+  const profileOf = id => CFG.profiles.find(x => x.id === id);
+  const isOwner = () => S && S.id === CFG.owner;
+  const ownerName = () => (profileOf(CFG.owner) || {}).name || 'the boss';
   function fresh(p) {
     return {
       v: 1, id: p.id, name: p.name, age: null, email: '', onboarded: false, createdAt: Date.now(),
       xp: 0, dailyXp: {}, streak: { count: 0, last: null, best: 0 }, dailyGoal: CFG.defaultDailyGoal,
       lessons: {}, cards: {}, quizLog: [], reviews: 0,
+      method: CFG.defaultMethod, ratings: [], myRequest: null, rejected: [], notice: null,
       arena: { balance: CFG.arena.startBalance, start: CFG.arena.startBalance, days: 0, trades: [], equity: [CFG.arena.startBalance], seed: Math.floor(Math.random() * 1e6) },
       chat: [], badges: {}, friends: {},
     };
   }
   function load(id) {
-    const p = CFG.profiles.find(x => x.id === id);
+    const p = profileOf(id);
     let st = null; try { st = JSON.parse(storeGet(KEY(id)) || 'null'); } catch (e) { st = null; }
-    return Object.assign(fresh(p), st || {});
+    const out = Object.assign(fresh(p), st || {});
+    if (!M.METHODS[out.method]) out.method = CFG.defaultMethod;
+    return out;
   }
   function save() { if (S) storeSet(KEY(S.id), JSON.stringify(S)); }
+  function saveOther(st) { if (S && st.id === S.id) { S = st; save(); } else storeSet(KEY(st.id), JSON.stringify(st)); }
+  function lab() { try { return Object.assign({ requests: [] }, JSON.parse(storeGet(LABKEY) || 'null') || {}); } catch (e) { return { requests: [] }; } }
+  function saveLab(L) { storeSet(LABKEY, JSON.stringify(L)); }
+  const pendingCount = () => lab().requests.filter(r => r.status === 'pending').length;
 
-  /* ───────── XP, streak, level ───────── */
-  const TITLES = ['Rookie', 'Chart Reader', 'Level Hunter', 'Risk Manager', 'Setup Sniper', 'Disciplined Trader', 'Pro Trader', 'Market Wizard'];
+  /* ───────── XP = your stock price, rank, green days ───────── */
+  const RANKS = ['Intern', 'Analyst', 'Junior Trader', 'Trader', 'Senior Trader', 'Desk Head', 'Portfolio Manager', 'Market Wizard'];
   const level = xp => Math.floor(Math.sqrt(xp / 25)) + 1;
   const levelXp = lv => 25 * (lv - 1) * (lv - 1);
-  const title = lv => TITLES[Math.min(TITLES.length - 1, Math.floor((lv - 1) / 2))];
+  const title = lv => RANKS[Math.min(RANKS.length - 1, Math.floor((lv - 1) / 2))];
+  const price = xp => 10 + xp / 10;
+  const tickerOf = st => '$' + ((profileOf(st.id) || {}).ticker || st.name.slice(0, 4).toUpperCase());
   function touchStreak() {
     const d = today(); const st = S.streak;
     if (st.last === d) return;
     st.count = st.last && daysBetween(st.last, d) === 1 ? st.count + 1 : 1;
     st.last = d; st.best = Math.max(st.best, st.count);
   }
-  function liveStreak() { return S.streak.last && daysBetween(S.streak.last, today()) <= 1 ? S.streak.count : 0; }
+  const liveStreakOf = st => st.streak.last && daysBetween(st.streak.last, today()) <= 1 ? st.streak.count : 0;
+  const liveStreak = () => liveStreakOf(S);
   function addXP(n, why) {
     if (n <= 0) return;
     const before = level(S.xp);
     S.xp += n; S.dailyXp[today()] = (S.dailyXp[today()] || 0) + n;
     touchStreak(); checkBadges(); save(); renderTop();
-    toast(`+${n} XP${why ? ' · ' + why : ''}`, 'xp');
-    if (level(S.xp) > before) setTimeout(() => toast(`🎉 Level ${level(S.xp)}: ${title(level(S.xp))}!`, 'level'), 600);
+    toast(`${tickerOf(S)} ▲ +${n} XP${why ? ' · ' + why : ''}`, 'xp');
+    if (level(S.xp) > before) setTimeout(() => toast(`🚀 Promoted! You're now ${title(level(S.xp))} (Lv ${level(S.xp)})`, 'level'), 600);
+  }
+  function priceHistory(st, days) {
+    const pts = []; let xp = st.xp;
+    for (let i = 0; i < days; i++) { const d = new Date(); d.setDate(d.getDate() - i); pts.unshift(price(xp)); xp -= st.dailyXp[today(d)] || 0; }
+    return pts;
+  }
+  function spark(pts, w, h, color) {
+    const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
+    const xy = pts.map((p, i) => [i / (pts.length - 1) * w, h - 4 - (p - lo) / span * (h - 8)]);
+    const line = xy.map(([x, y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="spark"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="0,${h} ${line} ${w},${h}" fill="url(#sg)"/><polyline points="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
   }
 
-  /* ───────── grading & mastery ───────── */
+  /* ───────── grading, mastery & spaced repetition ───────── */
+  const DAY = 86400000, BOX_DAYS = [0, 1, 3, 7, 16, 35];
   function lessonDone(id) { return !!(S.lessons[id] && S.lessons[id].completedAt); }
-  function unlocked(l) { return l.n === 0 || lessonDone(LESSONS[l.n - 1].id) || lessonDone(l.id); }
+  // Normal seasons unlock in order. "free" seasons (Swing Trading, Investing) open right after Season 0.
+  const START_DONE = () => COURSE[0].lessons.every(x => lessonDone(x.id));
+  function unlocked(l) {
+    if (l.n === 0 || lessonDone(l.id)) return true;
+    if (l.li === 0 && l.unit.free) return START_DONE();
+    return lessonDone(LESSONS[l.n - 1].id);
+  }
   function nextLesson() { const l = LESSONS.find(x => !lessonDone(x.id)); return l ? l.id : null; }
   function stars(score) { return score >= 100 ? 3 : score >= 80 ? 2 : 1; }
+  const letter = g => g >= 97 ? 'A+' : g >= 90 ? 'A' : g >= 80 ? 'B' : g >= 70 ? 'C' : g >= 60 ? 'D' : 'F';
   function weakLessons() {
     return LESSONS.filter(l => S.lessons[l.id] && S.lessons[l.id].last != null && (S.lessons[l.id].last < 80 || missedIn(l.id) > 0))
       .map(l => ({ id: l.id, title: l.title, unit: l.unit.title, score: S.lessons[l.id].last, missed: missedIn(l.id) }))
       .sort((a, b) => a.score - b.score);
   }
   function missedIn(lessonId) { return Object.entries(S.cards).filter(([k, v]) => k.startsWith(lessonId + ':') && v.last === false).length; }
+  const dueAt = v => v.due != null ? v.due : (v.at || 0) + DAY;
+  function dueCards() {
+    const now = Date.now();
+    return Object.entries(S.cards).filter(([k, v]) => v.last !== false && dueAt(v) <= now && lessonDone(k.split(':')[0])).sort((a, b) => dueAt(a[1]) - dueAt(b[1])).map(([k]) => k);
+  }
   function unitMastery(u) {
     const ls = u.lessons.filter(l => S.lessons[l.id] && S.lessons[l.id].last != null);
     if (!ls.length) return null;
@@ -110,15 +151,17 @@
   const BADGES = [
     { id: 'first_lesson', icon: '👣', name: 'First Steps', desc: 'Complete your first lesson', test: () => LESSONS.some(l => lessonDone(l.id)) },
     { id: 'perfect', icon: '💯', name: 'Perfectionist', desc: 'Score 100% on a lesson', test: () => Object.values(S.lessons).some(x => x.best === 100) },
-    { id: 'unit', icon: '🏅', name: 'Unit Cleared', desc: 'Finish a whole unit', test: () => COURSE.some(u => u.lessons.every(l => lessonDone(l.id))) },
+    { id: 'unit', icon: '🏅', name: 'Season Cleared', desc: 'Finish a whole season', test: () => COURSE.some(u => u.lessons.every(l => lessonDone(l.id))) },
     { id: 'risk', icon: '🛡️', name: 'Risk Manager', desc: 'Finish Risk Management with 90%+ mastery', test: () => { const u = COURSE.find(x => x.id === 'u4'); return u.lessons.every(l => lessonDone(l.id)) && unitMastery(u) >= 90; } },
-    { id: 'streak3', icon: '🔥', name: 'On Fire', desc: '3-day streak', test: () => S.streak.best >= 3 },
-    { id: 'streak7', icon: '⚡', name: 'Unstoppable', desc: '7-day streak', test: () => S.streak.best >= 7 },
+    { id: 'streak3', icon: '🟢', name: 'Green Week Start', desc: '3 green days in a row', test: () => S.streak.best >= 3 },
+    { id: 'streak7', icon: '📈', name: 'Bull Run', desc: '7 green days in a row', test: () => S.streak.best >= 7 },
+    { id: 'combo5', icon: '🔥', name: 'Hot Hand', desc: '5 correct in a row in one session', test: () => !!S.badges._combo5 },
     { id: 'review3', icon: '🔁', name: 'Fixer', desc: 'Finish 3 review sessions', test: () => S.reviews >= 3 },
+    { id: 'feedback', icon: '🗳️', name: 'Co-Designer', desc: 'Help shape the app with feedback', test: () => (S.ratings || []).some(r => r.reason) },
     { id: 'trade1', icon: '🎯', name: 'First Trade', desc: 'Take a trade in the Arena', test: () => S.arena.trades.length >= 1 },
     { id: 'journal10', icon: '📓', name: 'Journal Keeper', desc: 'Journal 10 Arena trades', test: () => S.arena.trades.filter(t => t.setup).length >= 10 },
     { id: 'disciplined', icon: '🧘', name: 'Disciplined Day', desc: 'Finish an Arena day with trades and zero rule breaks', test: () => !!S.badges._discDay },
-    { id: 'trades50', icon: '📈', name: 'Grinder', desc: '50 Arena trades', test: () => S.arena.trades.length >= 50 },
+    { id: 'trades50', icon: '🏋️', name: 'Grinder', desc: '50 Arena trades', test: () => S.arena.trades.length >= 50 },
     { id: 'edge', icon: '🧠', name: 'Edge Found', desc: 'Positive expectancy over 30+ trades', test: () => S.arena.trades.length >= 30 && arenaStats().expectancy > 0 },
     { id: 'grad', icon: '🎓', name: 'Graduate', desc: 'Pass the final exam (80%+)', test: () => (S.lessons.u8l3 || {}).best >= 80 },
   ];
@@ -129,7 +172,7 @@
   /* ───────── toast & modal ───────── */
   function toast(text, kind) {
     const t = document.createElement('div'); t.className = 'toast ' + (kind || ''); t.textContent = text;
-    $('#toasts').appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100);
+    $('#toasts').appendChild(t); setTimeout(() => t.classList.add('out'), 2800); setTimeout(() => t.remove(), 3300);
   }
   function confirmBox(text, okLabel) {
     return new Promise(res => {
@@ -139,35 +182,46 @@
       m.onclick = e => { const b = e.target.closest('[data-r]'); if (!b && e.target !== m) return; m.hidden = true; m.onclick = null; res(b && b.dataset.r === '1'); };
     });
   }
+  async function copy(text, okMsg) {
+    try { await navigator.clipboard.writeText(text); toast(okMsg); }
+    catch (e) { const m = $('#modal'); m.innerHTML = `<div class="modal-card"><p>Copy this:</p><textarea readonly class="codebox">${esc(text)}</textarea><div class="row end"><button class="btn primary" data-r="0">Done</button></div></div>`; m.hidden = false; m.onclick = ev => { if (ev.target.closest('[data-r]')) { m.hidden = true; m.onclick = null; } }; m.querySelector('textarea').select(); }
+  }
+  async function sendMsg(text) {
+    if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  }
+  const methodChip = id => { const m = M.METHODS[id]; return `<span class="mchip">${m.icon} ${esc(m.name)}</span>`; };
 
   /* ───────── routing ───────── */
-  const VIEWS = ['learn', 'arena', 'review', 'coach', 'news', 'progress'];
+  const VIEWS = ['learn', 'arena', 'review', 'coach', 'news', 'progress', 'lab'];
   let view = 'learn';
-  function go(v) { view = VIEWS.includes(v) ? v : 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
-  window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (S && S.onboarded && h !== view && VIEWS.includes(h)) { view = h; render(); } });
+  function go(v) { view = VIEWS.includes(v) ? v : 'learn'; if (view === 'lab' && !isOwner()) view = 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
+  window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (S && S.onboarded && h !== view && VIEWS.includes(h)) go(h); });
 
   /* ───────── profile picker & onboarding ───────── */
   function renderPicker() {
     document.body.classList.add('no-shell');
     const cards = CFG.profiles.map(p => {
       const st = load(p.id);
-      const sub = st.onboarded ? `Level ${level(st.xp)} · ${st.xp} XP · 🔥 ${st.streak.last && daysBetween(st.streak.last, today()) <= 1 ? st.streak.count : 0}` : 'New learner: tap to start';
-      return `<button class="profile-card" data-act="pick" data-id="${p.id}" style="--pc:${p.color}"><span class="avatar">${p.avatar}</span><span class="pname">${esc(st.onboarded ? st.name : p.name)}</span><span class="psub">${esc(sub)}</span></button>`;
+      const sub = st.onboarded ? `${title(level(st.xp))} · 🟢 ${liveStreakOf(st)} green days` : 'New trader: tap to start';
+      return `<button class="profile-card" data-act="pick" data-id="${p.id}" style="--pc:${p.color}"><span class="avatar">${p.avatar}</span><span class="pname">${esc(st.onboarded ? st.name : p.name)}</span>
+        <span class="ptick">${tickerOf(st)} <b>${fmt$(price(st.xp))}</b></span><span class="psub">${esc(sub)}</span></button>`;
     }).join('');
-    $('#app').innerHTML = `<div class="picker"><div class="logo-big">📈 ${esc(CFG.appName)}</div><h1>Who's learning today?</h1><div class="profiles">${cards}</div>
-      <p class="muted small">Progress is saved in this browser. Use <b>Progress → Backup code</b> to move it to another device.</p></div>`;
+    $('#app').innerHTML = `<div class="picker"><div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div><h1>Who's on the desk today?</h1><div class="profiles">${cards}</div>
+      <p class="muted small">Progress is saved in this browser. Use <b>Stats → Backup code</b> to move it to another device.</p></div>`;
   }
   function renderOnboarding() {
     document.body.classList.add('no-shell');
-    const p = CFG.profiles.find(x => x.id === S.id);
-    $('#app').innerHTML = `<div class="picker"><div class="avatar xl" style="--pc:${p.color}">${p.avatar}</div><h1>Welcome! Let's set you up</h1>
+    const p = profileOf(S.id);
+    $('#app').innerHTML = `<div class="picker"><div class="avatar xl" style="--pc:${p.color}">${p.avatar}</div><h1>Welcome to the desk</h1>
+      <p class="muted">You get your own stock, <b>${tickerOf(S)}</b>. Every lesson you crush makes it go up 📈</p>
       <form class="onboard" id="onboard" novalidate>
         <label>Your name<input name="name" required maxlength="30" value="${esc(S.name)}"></label>
         <label>Age<input name="age" type="number" min="10" max="99" required placeholder="e.g. 17"></label>
         <label>Email<input name="email" type="email" required placeholder="you@example.com"></label>
         <p class="muted small">🔒 Stored only in this browser on this device. It isn't sent anywhere.</p>
         <div class="err" id="ob-err"></div>
-        <button class="btn primary big" type="submit">Let's go 🚀</button>
+        <button class="btn primary big" type="submit">Open my desk 🚀</button>
         <button class="btn ghost" type="button" data-act="switch">← Back</button>
       </form></div>`;
     $('#onboard').addEventListener('submit', e => {
@@ -184,30 +238,35 @@
   function pick(id) {
     S = load(id); storeSet(LAST, id);
     if (!S.onboarded) return renderOnboarding();
+    syncRequest();
     document.body.classList.remove('no-shell');
     go(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'learn');
+    const n = isOwner() ? pendingCount() : 0;
+    if (n) setTimeout(() => toast(`🧪 ${n} teaching-method request${n > 1 ? 's' : ''} waiting in your Lab`, 'level'), 500);
   }
 
   /* ───────── shell ───────── */
   function renderShell() {
-    if ($('#shell')) return;
-    const nav = [['learn', '🗺️', 'Learn'], ['arena', '🕹️', 'Arena'], ['review', '🔁', 'Review'], ['coach', '🤖', 'Coach'], ['news', '📰', 'News'], ['progress', '🏆', 'Progress']];
-    $('#app').innerHTML = `<div id="shell">
-      <nav class="side"><div class="logo">📈 <span>${esc(CFG.appName)}</span></div>${nav.map(([v, i, t]) => `<a href="#${v}" class="nav-${v}" data-act="go" data-v="${v}"><span class="ni">${i}</span><span class="nt">${t}</span></a>`).join('')}
-        <a href="#" class="switch" data-act="switch"><span class="ni">👥</span><span class="nt">Switch learner</span></a></nav>
+    const want = isOwner() ? 'owner' : 'learner';
+    if ($('#shell') && $('#shell').dataset.kind === want) return;
+    const nav = [['learn', '🏠', 'Desk'], ['arena', '🕹️', 'Arena'], ['review', '🔁', 'Review'], ['coach', '😎', 'Bro'], ['news', '📰', 'News'], ['progress', '📊', 'Stats']];
+    if (isOwner()) nav.push(['lab', '🧪', 'Lab']);
+    $('#app').innerHTML = `<div id="shell" data-kind="${want}">
+      <nav class="side"><div class="logo"><span class="logo-mark">◢</span> <span>${esc(CFG.appName)}</span></div>${nav.map(([v, i, t]) => `<a href="#${v}" class="nav-${v}" data-act="go" data-v="${v}"><span class="ni">${i}</span><span class="nt">${t}</span>${v === 'lab' ? '<span class="dot" id="labdot" hidden></span>' : ''}</a>`).join('')}
+        <a href="#" class="switch" data-act="switch"><span class="ni">👥</span><span class="nt">Switch trader</span></a></nav>
       <div class="col"><header class="top" id="top"></header><main id="main"></main></div></div>`;
   }
   function renderTop() {
     const t = $('#top'); if (!t || !S) return;
-    const lv = level(S.xp), cur = S.xp - levelXp(lv), need = levelXp(lv + 1) - levelXp(lv);
+    const lv = level(S.xp);
     const dx = S.dailyXp[today()] || 0, pct = Math.min(100, Math.round(dx / S.dailyGoal * 100));
-    const p = CFG.profiles.find(x => x.id === S.id);
-    t.innerHTML = `<div class="who" data-act="switch" title="Switch learner"><span class="avatar sm" style="--pc:${p.color}">${p.avatar}</span><div><b>${esc(S.name)}</b><div class="muted small">Lv ${lv} · ${title(lv)}</div></div></div>
-      <div class="lvbar" title="${cur}/${need} XP to next level"><div style="width:${Math.round(cur / need * 100)}%"></div></div>
-      <div class="chips"><span class="chip fire" title="Day streak">🔥 ${liveStreak()}</span><span class="chip xp" title="Total XP">⚡ ${S.xp}</span>
-      <span class="chip goal" title="Daily goal">${ring(pct)} ${dx}/${S.dailyGoal}</span></div>`;
+    const p = profileOf(S.id);
+    t.innerHTML = `<div class="who" data-act="switch" title="Switch trader"><span class="avatar sm" style="--pc:${p.color}">${p.avatar}</span><div><b>${esc(S.name)}</b><div class="muted small">${title(lv)} · Lv ${lv}</div></div></div>
+      <div class="chips"><span class="chip tick" title="Your stock (1 XP = 10¢)">${tickerOf(S)} ${fmt$(price(S.xp))}${dx ? ` <em>▲${(dx / 10).toFixed(1)}</em>` : ''}</span><span class="chip fire" title="Green days in a row">🟢 ${liveStreak()}</span>
+      <span class="chip goal" title="Today's target">${ring(pct)} ${dx}/${S.dailyGoal}</span></div>`;
+    const dot = $('#labdot'); if (dot) { const n = pendingCount(); dot.hidden = !n; dot.textContent = n; }
   }
-  function ring(p) { const r = 9, c = 2 * Math.PI * r; return `<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="${r}" fill="none" stroke="#37464f" stroke-width="3"/><circle cx="11" cy="11" r="${r}" fill="none" stroke="#ffc800" stroke-width="3" stroke-dasharray="${c * p / 100} ${c}" transform="rotate(-90 11 11)" stroke-linecap="round"/></svg>`; }
+  function ring(p) { const r = 9, c = 2 * Math.PI * r; return `<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="${r}" fill="none" stroke="#263052" stroke-width="3"/><circle cx="11" cy="11" r="${r}" fill="none" stroke="#00d68f" stroke-width="3" stroke-dasharray="${c * p / 100} ${c}" transform="rotate(-90 11 11)" stroke-linecap="round"/></svg>`; }
 
   function render() {
     if (!S) return renderPicker();
@@ -216,43 +275,88 @@
     document.querySelectorAll('nav.side a').forEach(a => a.classList.toggle('on', a.dataset.v === view));
     const m = $('#main'); m.scrollTop = 0;
     if (window.TQ_Arena && view !== 'arena') window.TQ_Arena.pause();
-    ({ learn: renderLearn, arena: () => window.TQ_Arena.render(m), review: renderReview, coach: renderCoach, news: renderNews, progress: renderProgress })[view](m);
+    ({ learn: renderLearn, arena: () => window.TQ_Arena.render(m), review: renderReview, coach: renderCoach, news: renderNews, progress: renderProgress, lab: renderLab })[view](m);
   }
 
-  /* ───────── LEARN (path) ───────── */
+  /* ───────── method-change requests (learner side) ───────── */
+  // Same device: pick up Leon's decision from the shared Lab store.
+  function syncRequest() {
+    const r = S.myRequest; if (!r) return;
+    const l = lab().requests.find(x => x.id === r.id);
+    if (l && l.status === 'approved') { if (S.method !== l.decidedTo) applyMethodTo(S, l.decidedTo, 'approved'); else { S.myRequest = null; save(); } }
+    else if (l && l.status === 'declined') { S.rejected = [...new Set((S.rejected || []).concat(r.to))]; S.myRequest = null; S.notice = { type: 'declined', to: r.to }; save(); }
+  }
+  function applyMethodTo(st, to, how) {
+    st.method = to; st.myRequest = null; st.notice = { type: how, to, at: Date.now() };
+    saveOther(st);
+  }
+  function requestBanner() {
+    let h = '';
+    const n = S.notice;
+    if (n) {
+      const mm = M.METHODS[n.to];
+      h += n.type === 'declined'
+        ? `<div class="banner"><b>${esc(ownerName())} kept your current style</b> for now (${methodChip(S.method)}). Keep rating lessons, it still counts. <button class="btn ghost sm" data-act="dismiss-notice">OK</button></div>`
+        : `<div class="banner good">✅ <b>${n.type === 'approved' && !isOwner() ? esc(ownerName()) + ' approved it!' : 'Done!'}</b> You now learn with ${methodChip(n.to)}: ${esc(mm.tagline)} <button class="btn ghost sm" data-act="dismiss-notice">Nice</button></div>`;
+    }
+    const r = S.myRequest;
+    if (r && !isOwner()) h += `<div class="banner warn">⏳ <b>Waiting for ${esc(ownerName())}</b> to OK switching you to ${methodChip(r.to)}.
+      <div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="tell-owner">📲 Message ${esc(ownerName())}</button><input id="apprcode" placeholder="Approval code" maxlength="8" style="width:140px"><button class="btn ghost sm" data-act="use-code">Use code</button></div></div>`;
+    return h;
+  }
+  function requestMessage(r) {
+    return `Hey ${ownerName()}! ${r.name} rated "${M.METHODS[r.from].name}" ${r.stars}★ after "${r.lesson}".\nReason: ${r.reasonLabel}${r.text ? ' – "' + r.text + '"' : ''}\nThe app suggests switching ${r.name} to ${M.METHODS[r.to].icon} ${M.METHODS[r.to].name}.\n\nOpen ${CFG.appName} → 🧪 Lab → paste this code:\nMTBR.${b64e(r)}`;
+  }
+
+  /* ───────── LEARN (the desk) ───────── */
   function renderLearn(m) {
-    const nx = nextLesson();
-    let html = '';
-    if (S.age && S.age < 18) html += `<div class="banner sim">🎮 <b>Simulator mode.</b> Everything here uses virtual money. Build your skills now, and you'll be ready for real markets at 18.</div>`;
-    const weak = weakLessons();
-    if (weak.length) html += `<div class="banner warn">🎯 <b>${weak.length} topic${weak.length > 1 ? 's' : ''} need${weak.length > 1 ? '' : 's'} more work:</b> ${weak.slice(0, 3).map(w => esc(w.title) + ` (${w.score}%)`).join(', ')}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
+    syncRequest();
+    const nx = nextLesson(), nl = nx && LBYID[nx];
+    const p = profileOf(S.id);
+    const hist = priceHistory(S, 14), dx = S.dailyXp[today()] || 0;
+    const lv = level(S.xp), cur = S.xp - levelXp(lv), need = levelXp(lv + 1) - levelXp(lv);
+    const due = dueCards().length, missed = Object.values(S.cards).filter(v => v.last === false).length;
+    let html = `<section class="stock-card" style="--pc:${p.color}">
+        <div class="sc-left"><div class="sc-tick">${tickerOf(S)} <span class="muted">· ${esc(S.name)}'s stock</span></div>
+          <div class="sc-price">${fmt$(price(S.xp))} <span class="${dx ? 'up' : 'flat'}">${dx ? '▲ +' + (dx / 10).toFixed(2) + ' today' : '— flat today'}</span></div>
+          <div class="sc-rank">${title(lv)} <span class="muted small">· ${need - cur} XP to promotion</span></div>
+          <div class="sc-meta"><span>🟢 <b>${liveStreak()}</b> green day${liveStreak() === 1 ? '' : 's'}</span><span>🎯 <b>${dx}/${S.dailyGoal}</b> today</span><span>${methodChip(S.method)}</span></div></div>
+        <div class="sc-chart">${spark(hist, 260, 110, '#00d68f')}<div class="muted small sc-cap">last 14 days</div></div></section>`;
+    html += requestBanner();
+    if (S.age && S.age < 18) html += `<div class="banner sim">🎮 <b>Simulator mode.</b> Everything here uses virtual money. Build the skill now, so you're ready for real markets at 18.</div>`;
+    if (missed + due) html += `<div class="banner warn">🔁 <b>${missed + due} card${missed + due > 1 ? 's' : ''} ready to review</b>${missed ? ` (${missed} you missed${due ? `, ${due} due so you don't forget` : ''})` : ' (due so you don\'t forget)'}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
+    if (nl) html += `<section class="next-card" style="--uc:${nl.unit.color}"><div class="nc-icon">${nl.icon}</div><div class="nc-body"><div class="nc-kicker">NEXT UP · SEASON ${nl.ui} · ${esc(nl.unit.title)}</div><h2>${esc(nl.title)}</h2>
+        <div class="muted small">${methodChip(S.method)} ${esc(M.METHODS[S.method].tagline)}</div></div><button class="btn primary big" data-act="open-lesson" data-id="${nl.id}">Start ▶</button></section>`;
+    else html += `<div class="banner good">🎓 <b>You finished the whole course!</b> Keep your edge sharp in the Arena and Review.</div>`;
     COURSE.forEach((u, ui) => {
-      const unitOpen = u.lessons.some(l => unlocked(l));
-      const mast = unitMastery(u);
-      html += `<section class="unit ${unitOpen ? '' : 'locked'}" style="--uc:${u.color}"><div class="unit-head"><div><div class="unit-num">UNIT ${ui}</div><h2>${u.icon} ${esc(u.title)}</h2><div class="unit-sub">${esc(u.subtitle)}</div></div>${mast != null ? `<div class="mastery-pill">${mast}% mastery</div>` : ''}</div><div class="path">`;
-      u.lessons.forEach((l, li) => {
-        const st = S.lessons[l.id]; const done = lessonDone(l.id), open = unlocked(l), cur = l.id === nx;
-        const off = [0, 60, 90, 60, 0, -60, -90, -60][li % 8];
-        html += `<div class="node-wrap" style="transform:translateX(${off}px)">${cur ? '<div class="start-bubble">START</div>' : ''}
-          <button class="node ${done ? 'done' : ''} ${open ? 'open' : 'locked'} ${cur ? 'current' : ''}" ${open ? `data-act="open-lesson" data-id="${l.id}"` : 'disabled'} title="${esc(l.title)}">${open ? l.icon : '🔒'}</button>
-          <div class="node-label">${esc(l.title)}${done ? `<span class="stars">${'★'.repeat(st.stars)}${'☆'.repeat(3 - st.stars)}</span><span class="grade ${st.last < 80 ? 'bad' : ''}">${st.last}%</span>` : ''}</div></div>`;
+      const open = u.lessons.some(l => unlocked(l)), done = u.lessons.filter(l => lessonDone(l.id)).length, mast = unitMastery(u);
+      html += `<section class="season ${open ? '' : 'locked'}" style="--uc:${u.color}"><header class="season-head"><span class="season-num">S${ui}</span><div><h2>${u.icon} ${esc(u.title)}</h2><div class="muted small">${esc(u.subtitle)}</div></div>
+        <div class="season-prog"><b>${done}/${u.lessons.length}</b>${mast != null ? `<span class="muted small">${letter(mast)} avg</span>` : ''}</div></header><div class="season-bar"><div style="width:${done / u.lessons.length * 100}%"></div></div><div class="lrows">`;
+      u.lessons.forEach(l => {
+        const st = S.lessons[l.id], isDone = lessonDone(l.id), ok = unlocked(l), isCur = l.id === nx;
+        const right = isDone ? `<span class="gbadge ${st.last < 80 ? 'low' : ''}">${letter(st.last)}<small>${st.last}%</small></span>` : isCur ? '<span class="tag-next">NEXT</span>' : ok ? '' : '<span class="lock">🔒</span>';
+        html += `<button class="lrow ${isDone ? 'done' : ''} ${isCur ? 'cur' : ''}" ${ok ? `data-act="open-lesson" data-id="${l.id}"` : 'disabled'}><span class="licon">${l.icon}</span><span class="ltitle">${esc(l.title)}<small>${l.cards.filter(isQ).length} questions · +${l.xp} XP</small></span>${right}</button>`;
       });
       html += `</div></section>`;
     });
     m.innerHTML = `<div class="learn">${html}</div>`;
-    const curEl = m.querySelector('.node.current'); if (curEl) curEl.scrollIntoView({ block: 'center' });
   }
 
   /* ───────── LESSON / QUIZ PLAYER ───────── */
   let P = null; // player state
+  const REPLIES = ['Got it 👍', 'Makes sense', 'Ok, and?', 'Go on…', 'Sick 🔥', 'Next one', 'Easy 😎', 'Say less'];
+  const RUSH_SECS = { mcq: 25, tf: 15, num: 45 };
   function openLesson(id) {
     const l = LBYID[id]; if (!l || !unlocked(l)) return;
-    P = { kind: 'lesson', lesson: l, cards: l.cards.map((c, i) => ({ c, key: l.id + ':' + i })), queue: l.cards.map((_, i) => i), pos: 0, first: {}, mistakes: [] };
+    const method = S.method;
+    const steps = M.buildSteps(l, method).map(s => Object.assign(s, s.ci != null ? { c: l.cards[s.ci], key: l.id + ':' + s.ci } : {}));
+    P = { kind: 'lesson', lesson: l, method, steps, queue: steps.map((_, i) => i), pos: 0, first: {}, marks: [], mistakes: [], predicts: {}, combo: 0, bestCombo: 0, bub: 1 };
     renderPlayer();
   }
   function openReview() {
     const missed = Object.entries(S.cards).filter(([, v]) => v.last === false).sort((a, b) => a[1].at - b[1].at).map(([k]) => k);
     let keys = missed.slice(0, 10);
+    keys = keys.concat(dueCards().filter(k => !keys.includes(k)).slice(0, 10 - keys.length));
     if (keys.length < 6) {
       const pool = [];
       LESSONS.filter(l => lessonDone(l.id)).forEach(l => l.cards.forEach((c, i) => { const k = l.id + ':' + i; if (isQ(c) && !keys.includes(k)) pool.push({ k, w: (S.cards[k] || {}).wrong || 0 }); }));
@@ -260,115 +364,313 @@
       keys = keys.concat(pool.slice(0, 8 - keys.length).map(x => x.k));
     }
     if (!keys.length) { toast('Finish a lesson first, then come back to review!'); return; }
-    const cards = keys.map(k => { const [lid, i] = k.split(':'); return { c: LBYID[lid].cards[+i], key: k, from: LBYID[lid] }; });
-    P = { kind: 'review', lesson: { title: 'Review: weak spots', icon: '🔁', xp: 0 }, cards, queue: cards.map((_, i) => i), pos: 0, first: {}, mistakes: [] };
+    keys.sort(() => Math.random() - 0.5); // interleave topics
+    const steps = keys.map(k => { const [lid, i] = k.split(':'); return { k: 'q', ci: +i, c: LBYID[lid].cards[+i], key: k, from: LBYID[lid] }; });
+    P = { kind: 'review', lesson: { title: 'Review: mixed & due', icon: '🔁', xp: 0 }, method: 'review', steps, queue: steps.map((_, i) => i), pos: 0, first: {}, marks: [], mistakes: [], predicts: {}, combo: 0, bestCombo: 0, bub: 1 };
     renderPlayer();
   }
-  function closePlayer() { P = null; $('#overlay').hidden = true; $('#overlay').innerHTML = ''; render(); }
+  function stopTimer() { if (P && P.timer) { clearInterval(P.timer); P.timer = null; } }
+  function closePlayer() { stopTimer(); P = null; $('#overlay').hidden = true; $('#overlay').innerHTML = ''; render(); }
+  const curStep = () => { const i = P.queue[P.pos]; return { i, s: P.steps[i] }; };
+
+  function candles() {
+    return `<div class="cprog">${P.queue.map((si, j) => { const k = P.steps[si].k; const cls = j < P.pos ? (P.marks[j] || 'seen') : j === P.pos ? 'now' : ''; return `<i class="${cls} ${k === 'q' ? 'q' : ''}"></i>`; }).join('')}</div>`;
+  }
+  function questionHTML(c, s) {
+    let h = `<h2 class="q">${esc(c.q)}</h2>${c.chart ? '<canvas class="lesson-chart"></canvas>' : ''}`;
+    if (c.t === 'mcq') h += `<div class="opts">${c.opts.map((op, i) => `<button class="opt" data-act="sel" data-i="${i}"><span class="k">${'ABCD'[i]}</span>${esc(op)}</button>`).join('')}</div>`;
+    if (c.t === 'tf') h += `<div class="opts tf"><button class="opt bull" data-act="sel" data-i="1">🐂 <span>True</span></button><button class="opt bear" data-act="sel" data-i="0">🐻 <span>False</span></button></div>`;
+    if (c.t === 'num') h += `<div class="num-in"><input id="numans" type="number" step="any" inputmode="decimal" placeholder="Your answer"><span>${esc(c.suffix || '')}</span></div>`;
+    return h;
+  }
+  const bro = (txt) => `<div class="bro-line"><span class="bro-av">😎</span><span>${txt}</span></div>`;
 
   function renderPlayer() {
+    stopTimer();
     const o = $('#overlay'); o.hidden = false;
-    const idx = P.queue[P.pos]; const { c, from } = P.cards[idx];
-    const pct = Math.round(P.pos / P.queue.length * 100);
-    let body = '';
-    if (c.t === 'learn') body = `<h2>${esc(c.title)}</h2>${c.chart ? '<canvas class="lesson-chart"></canvas>' : ''}<div class="learn-html">${c.html}</div>`;
-    else {
-      body = `${P.first[idx] === false ? '<div class="retry-tag">🔁 Try again</div>' : ''}${from ? `<div class="muted small">From: ${esc(from.unit.title)} → ${esc(from.title)}</div>` : ''}<h2 class="q">${esc(c.q)}</h2>${c.chart ? '<canvas class="lesson-chart"></canvas>' : ''}`;
-      if (c.t === 'mcq') body += `<div class="opts">${c.opts.map((op, i) => `<button class="opt" data-act="sel" data-i="${i}"><span class="k">${i + 1}</span>${esc(op)}</button>`).join('')}</div>`;
-      if (c.t === 'tf') body += `<div class="opts tf"><button class="opt" data-act="sel" data-i="1">✅ True</button><button class="opt" data-act="sel" data-i="0">❌ False</button></div>`;
-      if (c.t === 'num') body += `<div class="num-in"><input id="numans" type="number" step="any" inputmode="decimal" placeholder="Your answer"><span>${esc(c.suffix || '')}</span></div>`;
+    const { i, s } = curStep(); const c = s.c;
+    const mm = M.METHODS[P.method];
+    let body = '', btn = { act: 'next', label: 'Continue', disabled: false };
+    if (s.k === 'learn') {
+      body = `<h2>${esc(c.title)}</h2>${c.chart ? '<canvas class="lesson-chart"></canvas>' : ''}<div class="learn-html">${c.html}</div>`;
+    } else if (s.k === 'chat') {
+      const bs = M.bubbles(c.html); s.n = bs.length;
+      const shown = bs.slice(0, P.bub);
+      body = `<div class="chat-lesson"><div class="chat-topic">💬 ${esc(c.title)}</div>${shown.map((b, j) => `<div class="cb ${j === shown.length - 1 ? 'new' : ''}"><span class="bro-av">😎</span><div class="cb-body learn-html">${b}</div></div>${j === 0 && c.chart ? '<div class="cb chart-b"><span class="bro-av">😎</span><div class="cb-body"><canvas class="lesson-chart"></canvas></div></div>' : ''}`).join('')}</div>`;
+      if (P.bub < bs.length) btn = { act: 'more', label: pickOne(REPLIES), disabled: false, reply: true };
+    } else if (s.k === 'sheet') {
+      body = `<div class="sheet-head">⚡ <b>Cheat sheet</b><span class="muted small">Skim it. A timed rush comes next, with combos for streaks.</span></div>
+        <div class="sheet">${s.cis.map(ci => { const lc = P.lesson.cards[ci]; return `<section class="sheet-card"><h3>${esc(lc.title)}</h3><div class="learn-html">${lc.html}</div></section>`; }).join('')}</div>`;
+      btn = { act: 'next', label: 'Start the rush ⚡', disabled: false };
+    } else if (s.k === 'predict') {
+      body = `<div class="predict-tag">🎯 CALL IT FIRST · no penalty, just your best guess</div>${questionHTML(c, s)}`;
+      btn = { act: 'lock', label: 'Lock it in 🔒', disabled: c.t !== 'tf' && c.t !== 'mcq' ? false : true };
+    } else {
+      const retry = P.first[i] === false;
+      const called = P.predicts[s.ci];
+      body = `${retry ? '<div class="retry-tag">🔁 Second chance</div>' : ''}${s.from ? `<div class="muted small">From: ${esc(s.from.unit.title)} → ${esc(s.from.title)}</div>` : ''}
+        ${called != null && !retry ? `<div class="called">You called: <b>${esc(c.t === 'tf' ? (called === 1 ? 'True' : 'False') : c.opts[called])}</b>. Let's see…</div>` : ''}
+        ${P.method === 'chat' && P.kind === 'lesson' ? bro(pickOne(['Quick check:', 'Your turn:', 'Prove it:', 'Ok, quiz time:'])) : ''}${questionHTML(c, s)}`;
+      if (P.method === 'rush') body = `<div class="timer"><div id="tbar"></div></div>` + body;
+      btn = { act: 'check', label: 'Check', disabled: true };
     }
-    o.innerHTML = `<div class="player"><div class="ptop"><button class="x" data-act="quit">✕</button><div class="pbar"><div style="width:${pct}%"></div></div><span class="ptitle">${P.lesson.icon} ${esc(P.lesson.title)}</span></div>
-      <div class="pbody">${body}</div>
-      <div class="pfoot" id="pfoot"><div class="fb"></div><button class="btn primary big" id="pbtn" data-act="${c.t === 'learn' ? 'next' : 'check'}" ${c.t === 'learn' ? '' : 'disabled'}>${c.t === 'learn' ? 'Continue' : 'Check'}</button></div></div>`;
+    o.innerHTML = `<div class="player m-${P.method}"><div class="ptop"><button class="x" data-act="quit" title="Quit">✕</button>${candles()}
+        ${P.combo >= 2 ? `<span class="combo">🔥 x${P.combo}</span>` : ''}<span class="ptitle">${P.lesson.icon} ${esc(P.lesson.title)}${mm ? ` · ${mm.icon} ${esc(mm.name)}` : ''}</span></div>
+      <div class="pbody">${body}<div id="fb"></div></div>
+      <div class="pfoot"><button class="btn ${btn.reply ? 'reply' : 'primary'} big" id="pbtn" data-act="${btn.act}" ${btn.disabled ? 'disabled' : ''}>${btn.label}</button></div></div>`;
     P.sel = null; P.checked = false;
-    if (c.chart) requestAnimationFrame(() => { const cv = o.querySelector('.lesson-chart'); const spec = window.TQ_Charts.PATTERNS[c.chart.pattern](c.chart.seed); window.TQ_Charts.draw(cv, spec, { vwap: !spec.noVwap }); });
+    if (c && c.chart) requestAnimationFrame(() => { const cv = o.querySelector('.lesson-chart'); if (!cv) return; const spec = window.TQ_Charts.PATTERNS[c.chart.pattern](c.chart.seed); window.TQ_Charts.draw(cv, spec, { vwap: !spec.noVwap }); });
     const ni = $('#numans'); if (ni) { ni.focus(); ni.addEventListener('input', () => { $('#pbtn').disabled = ni.value === ''; }); ni.addEventListener('keydown', e => { if (e.key === 'Enter' && ni.value !== '') $('#pbtn').click(); }); }
+    if (s.k === 'chat') { const last = o.querySelector('.cb.new'); if (last && P.bub > 1) last.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    if (s.k === 'q' && P.method === 'rush') {
+      const total = (RUSH_SECS[c.t] || 25) * (P.first[i] === false ? 1.5 : 1), t0 = Date.now();
+      P.timer = setInterval(() => {
+        const left = 1 - (Date.now() - t0) / 1000 / total; const b = $('#tbar');
+        if (b) { b.style.width = Math.max(0, left * 100) + '%'; b.classList.toggle('hurry', left < 0.3); }
+        if (left <= 0) { stopTimer(); check(true); }
+      }, 100);
+    }
   }
+  function moreBubble() { P.bub++; renderPlayer(); }
   function selOpt(i) {
     if (P.checked) return; P.sel = +i;
     document.querySelectorAll('.opt').forEach(b => b.classList.toggle('sel', b.dataset.i === String(i)));
     $('#pbtn').disabled = false;
   }
-  function check() {
-    const idx = P.queue[P.pos]; const { c, key } = P.cards[idx];
+  function lockPredict() {
+    const { s } = curStep(); P.predicts[s.ci] = P.sel; P.checked = true;
+    document.querySelectorAll('.opt').forEach(b => { b.disabled = true; });
+    $('#fb').innerHTML = `<div class="fbx neutral">${bro(pickOne(['Locked in. Now let\'s see if you\'re right 👀', 'Bold call. The next card will tell you.', 'Noted. Remember this guess!']))}</div>`;
+    const btn = $('#pbtn'); btn.textContent = 'Find out →'; btn.dataset.act = 'next'; btn.focus();
+  }
+  function check(timedOut) {
+    if (P.checked) return; stopTimer();
+    const { i, s } = curStep(); const c = s.c, key = s.key;
     let ok;
-    if (c.t === 'mcq') ok = P.sel === c.a;
+    if (timedOut) ok = false;
+    else if (c.t === 'mcq') ok = P.sel === c.a;
     else if (c.t === 'tf') ok = (P.sel === 1) === c.a;
     else { const v = parseFloat($('#numans').value); ok = Math.abs(v - c.a) <= (c.tol || 0.001) + 1e-9; }
     P.checked = true;
-    const firstTime = !(idx in P.first);
+    const firstTime = !(i in P.first);
     if (firstTime) {
-      P.first[idx] = ok;
-      const rec = S.cards[key] || { seen: 0, right: 0, wrong: 0 };
+      P.first[i] = ok;
+      const rec = S.cards[key] || { seen: 0, right: 0, wrong: 0, box: 0 };
       rec.seen++; ok ? rec.right++ : rec.wrong++;
-      // In a lesson, a miss marks the card for review; in a review, a correct answer clears it.
-      rec.last = ok; rec.at = Date.now(); S.cards[key] = rec;
-      if (!ok) { P.mistakes.push({ q: c.q, why: c.why }); P.queue.push(idx); }
+      // Spaced repetition: right answers move the card to a longer interval, misses reset it.
+      if (ok) rec.box = P.kind === 'review' ? Math.min(5, (rec.box || 0) + 1) : Math.max(rec.box || 0, 1); else rec.box = 0;
+      rec.last = ok; rec.at = Date.now(); rec.due = Date.now() + BOX_DAYS[rec.box] * DAY; S.cards[key] = rec;
+      if (!ok) { P.mistakes.push({ q: c.q, why: c.why }); P.queue.push(i); }
       if (P.kind === 'review' && ok) P.reviewRight = (P.reviewRight || 0) + 1;
+      if (ok) { P.combo++; P.bestCombo = Math.max(P.bestCombo, P.combo); if (P.combo >= 5) S.badges._combo5 = S.badges._combo5 || Date.now(); } else P.combo = 0;
       save();
     }
+    P.marks[P.pos] = ok ? 'ok' : 'bad';
     if (c.t !== 'num') document.querySelectorAll('.opt').forEach(b => {
       const bi = +b.dataset.i; const correct = c.t === 'mcq' ? bi === c.a : (bi === 1) === c.a;
       if (correct) b.classList.add('right'); else if (bi === P.sel) b.classList.add('wrong');
       b.disabled = true;
     });
-    const foot = $('#pfoot'); foot.className = 'pfoot ' + (ok ? 'ok' : 'bad');
-    const answer = c.t === 'num' ? `Correct answer: <b>${c.a}${c.suffix ? ' ' + esc(c.suffix) : ''}</b>. ` : '';
-    foot.querySelector('.fb').innerHTML = `<div class="fb-title">${ok ? pickPraise() : 'Not quite'}</div><div class="fb-why">${ok ? '' : answer}${esc(c.why || '')}</div>`;
+    const answer = c.t === 'num' ? `Answer: <b>${c.a}${c.suffix ? ' ' + esc(c.suffix) : ''}</b>. ` : '';
+    const called = P.predicts[s.ci];
+    const callNote = called != null && firstTime ? (((c.t === 'mcq' ? called === c.a : (called === 1) === c.a)) ? '<div class="callres good">🎯 Your first call was right too!</div>' : '<div class="callres">Your first call was off, and that\'s the point: now it sticks.</div>') : '';
+    const head = timedOut ? '⏰ Time\'s up' : ok ? pickOne(['Clean entry ✅', 'Profit taken 💰', 'Sharp read 🧠', 'In the money 📈', 'Textbook 🎯']) : pickOne(['Stopped out 🛑', 'Not this time', 'Missed the move']);
+    $('#fb').innerHTML = `<div class="fbx ${ok ? 'ok' : 'bad'}"><div class="fb-title">${head}${ok && P.combo >= 2 ? ` <span class="combo sm">🔥 x${P.combo}</span>` : ''}</div><div class="fb-why">${ok ? '' : answer}${esc(c.why || '')}</div>${callNote}${!ok && firstTime ? '<div class="muted small">It comes back at the end of this session, and in Review.</div>' : ''}</div>`;
+    const t = $('.ptop .combo'); if (t) t.textContent = P.combo >= 2 ? '🔥 x' + P.combo : '';
     const btn = $('#pbtn'); btn.textContent = 'Continue'; btn.dataset.act = 'next'; btn.disabled = false; btn.focus();
+    $('#fb').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
-  const PRAISE = ['Nice! 🔥', 'Correct! ✅', 'You got it! 💪', 'Great job! 🎯', 'Sharp! 🧠'];
-  const pickPraise = () => PRAISE[Math.floor(Math.random() * PRAISE.length)];
-  function next() { P.pos++; if (P.pos >= P.queue.length) finish(); else renderPlayer(); }
+  function next() {
+    const { s } = curStep();
+    if (s.k !== 'q') P.marks[P.pos] = 'seen';
+    P.pos++; P.bub = 1;
+    if (P.pos >= P.queue.length) finish(); else renderPlayer();
+  }
 
   function finish() {
-    const qIdx = P.cards.map((x, i) => i).filter(i => isQ(P.cards[i].c));
+    stopTimer();
+    const qIdx = P.steps.map((x, i) => i).filter(i => P.steps[i].k === 'q');
     const right = qIdx.filter(i => P.first[i]).length;
     const score = qIdx.length ? Math.round(right / qIdx.length * 100) : 100;
     let xp = 0;
     if (P.kind === 'lesson') {
       const l = P.lesson; const prev = S.lessons[l.id] || { attempts: 0, best: 0 };
       const firstClear = !prev.completedAt;
-      xp = Math.round(l.xp * (firstClear ? 1 : 0.4) * (score >= 60 ? 1 : 0.5)) + (score === 100 ? 5 : 0);
+      xp = Math.round(l.xp * (firstClear ? 1 : 0.4) * (score >= 60 ? 1 : 0.5)) + (score === 100 ? 5 : 0) + Math.min(10, P.bestCombo * (P.method === 'rush' ? 2 : 1));
       S.lessons[l.id] = { attempts: prev.attempts + 1, best: Math.max(prev.best || 0, score), last: score, stars: Math.max(prev.stars || 0, stars(score)), completedAt: prev.completedAt || Date.now(), lastAt: Date.now() };
     } else { xp = (P.reviewRight || 0) * 3 + 5; S.reviews++; }
-    S.quizLog.unshift({ at: Date.now(), kind: P.kind, id: P.lesson.id || 'review', title: P.lesson.title, score, right, total: qIdx.length });
+    S.quizLog.unshift({ at: Date.now(), kind: P.kind, id: P.lesson.id || 'review', title: P.lesson.title, score, right, total: qIdx.length, method: P.method });
     S.quizLog = S.quizLog.slice(0, 200);
-    save(); addXP(xp, P.kind === 'lesson' ? 'Lesson complete' : 'Review');
-    const st = stars(score);
-    const verdict = score >= 90 ? 'Mastered! 🏆' : score >= 80 ? 'Solid! 💪' : score >= 60 ? 'Getting there, review the misses' : 'Needs more work. Try again!';
+    save(); addXP(xp, P.kind === 'lesson' ? 'Lesson closed' : 'Review');
+    const verdict = score >= 90 ? 'Mastered. 🏆' : score >= 80 ? 'Solid session 💪' : score >= 60 ? 'Getting there: the misses are in Review' : 'Rough one. Run it back!';
+    const mm = M.METHODS[P.method];
+    P.done = { score };
     $('#overlay').innerHTML = `<div class="player"><div class="result">
-      <div class="big-emoji">${score >= 80 ? '🎉' : score >= 60 ? '👍' : '💪'}</div><h1>${P.kind === 'lesson' ? 'Lesson complete!' : 'Review complete!'}</h1>
-      ${P.kind === 'lesson' ? `<div class="stars-big">${'★'.repeat(st)}${'☆'.repeat(3 - st)}</div>` : ''}
-      <div class="res-stats"><div class="rs"><b>${score}%</b><span>Grade</span></div><div class="rs"><b>${right}/${qIdx.length}</b><span>First try</span></div><div class="rs"><b>+${xp}</b><span>XP</span></div></div>
-      <p class="verdict">${verdict}</p>
-      ${P.mistakes.length ? `<div class="mistakes"><h3>📝 What to remember</h3>${P.mistakes.map(x => `<div class="mist"><b>${esc(x.q)}</b><div>${esc(x.why)}</div></div>`).join('')}<p class="muted small">These questions are saved to your <b>Review</b> list.</p></div>` : ''}
-      <div class="row center">${P.kind === 'lesson' && score < 80 ? `<button class="btn ghost big" data-act="open-lesson" data-id="${P.lesson.id}">Retry lesson</button>` : ''}<button class="btn primary big" data-act="done">Continue</button></div></div></div>`;
+      <div class="sticket"><div class="t-head"><span>🔔 SESSION CLOSED</span><span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <h1>${P.lesson.icon} ${esc(P.lesson.title)}</h1>
+        <div class="t-grade ${score >= 80 ? 'up' : 'low'}">${letter(score)}<small>${score}%</small></div>
+        <div class="res-stats"><div class="rs"><b>${right}/${qIdx.length}</b><span>First try</span></div><div class="rs"><b>🔥 ${P.bestCombo}</b><span>Best combo</span></div><div class="rs"><b class="up">+${xp}</b><span>XP · ${tickerOf(S)} ▲${(xp / 10).toFixed(1)}</span></div></div>
+        <p class="verdict">${verdict}</p></div>
+      ${P.mistakes.length ? `<div class="mistakes"><h3>📝 Remember these</h3>${P.mistakes.map(x => `<div class="mist"><b>${esc(x.q)}</b><div>${esc(x.why)}</div></div>`).join('')}<p class="muted small">Saved to your <b>Review</b> list.</p></div>` : ''}
+      ${P.kind === 'lesson' ? `<div class="rate" id="rate"><h3>How did you like learning with ${mm.icon} ${esc(mm.name)}?</h3>
+        <div class="stars-in">${[1, 2, 3, 4, 5].map(n => `<button class="star" data-act="rate" data-n="${n}" aria-label="${n} stars">★</button>`).join('')}</div><div id="rate-more"></div></div>` : ''}
+      <div class="row center">${P.kind === 'lesson' && score < 80 ? `<button class="btn ghost big" data-act="open-lesson" data-id="${P.lesson.id}" id="retrybtn" ${P.kind === 'lesson' ? 'disabled' : ''}>Run it back</button>` : ''}<button class="btn primary big" data-act="done" id="donebtn" ${P.kind === 'lesson' ? 'disabled' : ''}>Continue</button></div>
+      ${P.kind === 'lesson' ? '<p class="muted small" id="rate-hint">Rate the lesson style to continue. Your rating shapes how the app teaches you.</p>' : ''}</div></div>`;
+  }
+
+  /* ───────── rating → reason → change request ───────── */
+  function unlockFinish() { ['#donebtn', '#retrybtn'].forEach(s => { const b = $(s); if (b) b.disabled = false; }); const h = $('#rate-hint'); if (h) h.remove(); }
+  function rate(n) {
+    if (!P || !P.done || P.rated) return;
+    document.querySelectorAll('.star').forEach(b => b.classList.toggle('on', +b.dataset.n <= n));
+    P.stars = n;
+    const box = $('#rate-more');
+    if (n >= CFG.expectedRating) {
+      P.rated = true; logRating(n);
+      box.innerHTML = `<p class="good"><b>${n === 5 ? 'Love that 🙌' : 'Thanks! 👍'}</b> Noted for ${esc(M.METHODS[P.method].name)}.</p>`;
+      document.querySelectorAll('.star').forEach(b => { b.disabled = true; });
+      return unlockFinish();
+    }
+    P.tries = P.tries || 0;
+    box.innerHTML = `<p><b>Lower than we hoped.</b> What didn't work for you?</p>
+      <div class="reasons">${M.REASONS.map(r => `<button class="chip-btn" data-act="reason" data-r="${r.id}">${r.label}</button>`).join('')}</div>
+      <textarea id="reason-text" maxlength="300" placeholder="Tell me more (optional, unless you picked “Something else”)"></textarea>
+      <div class="err" id="reason-err"></div><div class="row end"><button class="btn primary" data-act="send-reason" id="sendreason" disabled>Send</button></div>`;
+  }
+  function pickReason(id) {
+    P.reason = id;
+    document.querySelectorAll('.reasons .chip-btn').forEach(b => b.classList.toggle('on', b.dataset.r === id));
+    $('#sendreason').disabled = false;
+    if (id === 'other') $('#reason-text').focus();
+  }
+  function logRating(stars, extra) {
+    S.ratings = (S.ratings || []).concat([Object.assign({ at: Date.now(), lesson: P.lesson.id, title: P.lesson.title, method: P.method, stars, score: P.done.score }, extra || {})]).slice(-300);
+    checkBadges(); save();
+  }
+  function sendReason() {
+    const text = $('#reason-text').value;
+    const res = M.evaluate(P.reason, text, S.method, S.rejected);
+    if (!res.ok) {
+      P.tries++;
+      if (P.tries < 2) { $('#reason-err').textContent = res.msg; return; }
+      // Second unclear answer: save it, but don't ask for a change.
+      logRating(P.stars, { reason: P.reason, text: text.trim(), actionable: false });
+      P.rated = true;
+      $('#rate-more').innerHTML = `<p class="muted">Got it, saved. If you think of a clearer reason, tell me after the next lesson. 🙏</p>`;
+      return unlockFinish();
+    }
+    const rl = M.REASONS.find(r => r.id === P.reason);
+    logRating(P.stars, { reason: P.reason, text: res.text, actionable: true });
+    P.rated = true;
+    const to = res.to, tm = M.METHODS[to];
+    const r = { id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), learner: S.id, name: S.name, from: S.method, to, stars: P.stars, reason: res.reasonId, reasonLabel: rl.label, text: res.text, why: res.why, lesson: P.lesson.title, at: Date.now(), status: 'pending' };
+    // One open request per learner: a newer complaint replaces the older one.
+    const L = lab(); L.requests = L.requests.filter(x => !(x.learner === S.id && x.status === 'pending')); L.requests.unshift(r); L.requests = L.requests.slice(0, 100); saveLab(L);
+    S.myRequest = r; save();
+    if (isOwner()) {
+      $('#rate-more').innerHTML = `<div class="banner good">🧪 <b>Makes sense.</b> I'd switch you to ${methodChip(to)} because ${esc(res.why)}. It's waiting in your <b>Lab</b> for your OK.
+        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-act="lab-now">Open Lab</button></div></div>`;
+    } else {
+      $('#rate-more').innerHTML = `<div class="banner good">📨 <b>Fair point.</b> I want to switch you to ${methodChip(to)} because ${esc(res.why)}. ${esc(ownerName())} has to OK it first.
+        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-act="tell-owner">📲 Message ${esc(ownerName())}</button></div>
+        <div class="muted small">On the same device? ${esc(ownerName())} will see it in the Lab automatically.</div></div>`;
+    }
+    unlockFinish();
+  }
+
+  /* ───────── LAB (owner only): approve method changes ───────── */
+  function approve(id, to) {
+    const L = lab(); const r = L.requests.find(x => x.id === id); if (!r) return;
+    r.status = 'approved'; r.decidedTo = to || r.to; r.decidedAt = Date.now(); saveLab(L);
+    const st = r.learner === S.id ? S : load(r.learner);
+    if (st.onboarded || r.learner === S.id) applyMethodTo(st, r.decidedTo, r.learner === S.id ? 'self' : 'approved');
+    toast(`✅ ${r.name} now learns with ${M.METHODS[r.decidedTo].name}`, 'badge');
+    renderLab($('#main')); renderTop();
+    if (r.remote) showCode(r.id); // they're on their own phone: give Leon the code to send back
+  }
+  function decline(id) {
+    const L = lab(); const r = L.requests.find(x => x.id === id); if (!r) return;
+    r.status = 'declined'; r.decidedAt = Date.now(); saveLab(L);
+    if (r.learner === S.id) { S.myRequest = null; S.rejected = [...new Set((S.rejected || []).concat(r.to))]; save(); }
+    toast('Kept the current method');
+    renderLab($('#main')); renderTop();
+  }
+  function ratingStats(st) {
+    const g = {};
+    (st.ratings || []).forEach(r => { (g[r.method] = g[r.method] || []).push(r.stars); });
+    return M.ORDER.map(m => ({ m, n: (g[m] || []).length, avg: g[m] && g[m].length ? g[m].reduce((a, b) => a + b, 0) / g[m].length : null }));
+  }
+  function claudeReport() {
+    const lines = [`${CFG.appName} – feedback report (${today()})`, ''];
+    CFG.profiles.map(p => load(p.id)).filter(st => st.onboarded).forEach(st => {
+      lines.push(`## ${st.name} – current method: ${M.METHODS[st.method].name}`);
+      ratingStats(st).filter(x => x.n).forEach(x => lines.push(`- ${M.METHODS[x.m].name}: ${x.avg.toFixed(1)}★ avg over ${x.n} lessons`));
+      (st.ratings || []).filter(r => r.reason).slice(-10).forEach(r => lines.push(`- ${r.stars}★ "${r.title}" (${M.METHODS[r.method].name}): ${(M.REASONS.find(x => x.id === r.reason) || {}).label || r.reason}${r.text ? ' – "' + r.text + '"' : ''}`));
+      lines.push('');
+    });
+    lines.push('Requests:'); lab().requests.slice(0, 20).forEach(r => lines.push(`- ${new Date(r.at).toLocaleDateString('en-GB')} ${r.name}: ${M.METHODS[r.from].name} → ${M.METHODS[r.to].name} [${r.status}${r.decidedTo && r.decidedTo !== r.to ? ' → ' + M.METHODS[r.decidedTo].name : ''}]`));
+    return lines.join('\n');
+  }
+  function renderLab(m) {
+    if (!isOwner()) return go('learn');
+    const L = lab(), pend = L.requests.filter(r => r.status === 'pending'), old = L.requests.filter(r => r.status !== 'pending').slice(0, 8);
+    const learners = CFG.profiles.map(p => load(p.id)).map(st => (st.id === S.id ? S : st)).filter(st => st.onboarded);
+    const opts = sel => M.ORDER.map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${M.METHODS[k].icon} ${M.METHODS[k].name}</option>`).join('');
+    const reqCard = r => `<div class="lreq"><div class="lreq-head"><b>${esc(r.name)}</b> rated ${methodChip(r.from)} <span class="stars-sm">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span><span class="muted small">${new Date(r.at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })} · "${esc(r.lesson)}"</span></div>
+      <div class="lreq-reason">${esc(r.reasonLabel)}${r.text ? ` <q>${esc(r.text)}</q>` : ''}</div>
+      <div class="lreq-sug">💡 I want to switch ${esc(r.name)} to ${methodChip(r.to)} because ${esc(r.why)}.</div>
+      <div class="row"><select id="to-${r.id}">${opts(r.to)}</select><button class="btn primary sm" data-act="approve" data-id="${r.id}">✅ Approve</button><button class="btn ghost sm" data-act="decline" data-id="${r.id}">Decline</button></div></div>`;
+    m.innerHTML = `<div class="page"><h1>🧪 The Lab</h1><p class="muted">After every lesson, each trader rates the teaching style. When a rating is low and the reason makes sense, a change request lands here. Nothing changes until you approve it.</p>
+      <h2>📥 Waiting for you ${pend.length ? `<span class="count">${pend.length}</span>` : ''}</h2>
+      ${pend.length ? pend.map(reqCard).join('') : '<p class="muted">No requests right now. Everyone\'s vibing 😎</p>'}
+      <div class="share"><div><b>Got a request code on WhatsApp?</b> Paste it here (it starts with <code>MTBR.</code>).</div><div class="row"><input id="reqcode" placeholder="MTBR.…"><button class="btn ghost sm" data-act="add-req">Add request</button></div></div>
+      ${old.length ? `<h2>🗂️ Decided</h2><table class="tbl"><tr><th>When</th><th>Who</th><th>Change</th><th>Result</th><th></th></tr>${old.map(r => `<tr><td>${new Date(r.decidedAt || r.at).toLocaleDateString('en-GB')}</td><td>${esc(r.name)}</td><td>${M.METHODS[r.from].icon} → ${M.METHODS[r.decidedTo || r.to].icon} ${esc(M.METHODS[r.decidedTo || r.to].name)}</td><td class="${r.status === 'approved' ? 'good' : 'muted'}">${r.status}</td><td>${r.status === 'approved' && r.learner !== S.id ? `<button class="btn ghost sm" data-act="show-code" data-id="${r.id}">Code</button>` : ''}</td></tr>`).join('')}</table>` : ''}
+      <h2>🎛️ Teaching style per trader</h2><p class="muted small">You're the boss: you can also switch anyone directly.</p>
+      <div class="lab-grid">${learners.map(st => `<div class="lab-card"><div class="row"><span class="avatar sm" style="--pc:${profileOf(st.id).color}">${profileOf(st.id).avatar}</span><b>${esc(st.name)}</b><select data-set-method="${st.id}">${opts(st.method)}</select></div>
+        <div class="mstats">${ratingStats(st).map(x => `<div class="${x.m === st.method ? 'cur' : ''}"><span>${M.METHODS[x.m].icon} ${esc(M.METHODS[x.m].name)}</span><b>${x.avg == null ? '–' : x.avg.toFixed(1) + '★'}</b><small>${x.n} rating${x.n === 1 ? '' : 's'}</small></div>`).join('')}</div></div>`).join('')}</div>
+      <h2>📚 The methods</h2><div class="methods">${M.ORDER.map(k => { const x = M.METHODS[k]; return `<div class="method"><h3>${x.icon} ${esc(x.name)}</h3><p>${esc(x.tagline)}</p><p class="muted small">🔬 ${esc(x.science)}</p></div>`; }).join('')}</div>
+      <h2>🤖 Bigger changes</h2><p class="muted">Want the lessons themselves rewritten? Copy this report and paste it to Claude.</p><button class="btn ghost" data-act="claude-report">📋 Copy feedback report</button></div>`;
+    m.querySelectorAll('[data-set-method]').forEach(sel => sel.addEventListener('change', () => {
+      const id = sel.dataset.setMethod; const st = id === S.id ? S : load(id);
+      const L2 = lab(); L2.requests.filter(r => r.learner === id && r.status === 'pending').forEach(r => { r.status = 'approved'; r.decidedTo = sel.value; r.decidedAt = Date.now(); }); saveLab(L2);
+      applyMethodTo(st, sel.value, id === S.id ? 'self' : 'approved');
+      toast(`${st.name} → ${M.METHODS[sel.value].name}`, 'badge'); renderLab($('#main')); renderTop();
+    }));
+  }
+  function showCode(id) {
+    const r = lab().requests.find(x => x.id === id); if (!r) return;
+    const code = M.approvalCode(r.id, r.decidedTo || r.to);
+    const msg = `Approved ✅ You're switching to ${M.METHODS[r.decidedTo || r.to].name}. Open ${CFG.appName} → Desk and enter this code: ${code}`;
+    const mo = $('#modal');
+    mo.innerHTML = `<div class="modal-card"><h3>Approval code for ${esc(r.name)}</h3><p class="muted small">If ${esc(r.name)} uses their own phone, send this code. They enter it on their Desk.</p><div class="bigcode">${code}</div>
+      <div class="row end"><button class="btn ghost" data-r="0">Close</button><button class="btn primary" data-r="send">📲 Send</button></div></div>`;
+    mo.hidden = false;
+    mo.onclick = e => { const b = e.target.closest('[data-r]'); if (!b && e.target !== mo) return; mo.hidden = true; mo.onclick = null; if (b && b.dataset.r === 'send') sendMsg(msg); };
   }
 
   /* ───────── REVIEW ───────── */
   function renderReview(m) {
     const missed = Object.entries(S.cards).filter(([, v]) => v.last === false);
+    const due = dueCards();
     const weak = weakLessons();
-    m.innerHTML = `<div class="page"><h1>🔁 Review your weak spots</h1>
-      <p class="muted">Every question you miss is saved here. Answer it correctly in review to clear it.</p>
-      <div class="review-hero"><div><div class="big-num">${missed.length}</div><div>question${missed.length === 1 ? '' : 's'} to fix</div></div>
-      <button class="btn primary big" data-act="start-review">${missed.length ? 'Start review' : 'Practice mixed questions'}</button></div>
+    m.innerHTML = `<div class="page"><h1>🔁 Review</h1>
+      <p class="muted">Spaced repetition: every card you get right comes back later (1 day, 3 days, a week, 2 weeks…), right before you'd forget it. Cards you miss come back first. Topics get shuffled together, which makes your memory work harder and stick better.</p>
+      <div class="review-hero"><div class="rh-nums"><div><div class="big-num bad">${missed.length}</div><div class="small">missed</div></div><div><div class="big-num">${due.length}</div><div class="small">due today</div></div></div>
+      <button class="btn primary big" data-act="start-review">${missed.length + due.length ? 'Start review' : 'Practice mixed questions'}</button></div>
       <h2>Topics by grade</h2>${weak.length ? '' : '<p class="muted">No weak topics right now. Keep going! 💪</p>'}
-      <div class="weak-list">${weak.map(w => `<div class="weak"><div><b>${esc(w.title)}</b><div class="muted small">${esc(w.unit)} · ${w.missed} open mistake${w.missed === 1 ? '' : 's'}</div></div><div class="bar"><div style="width:${w.score}%;background:${w.score < 60 ? '#ff4b4b' : '#ff9600'}"></div></div><b>${w.score}%</b><button class="btn ghost sm" data-act="open-lesson" data-id="${w.id}">Redo</button></div>`).join('')}</div></div>`;
+      <div class="weak-list">${weak.map(w => `<div class="weak"><div><b>${esc(w.title)}</b><div class="muted small">${esc(w.unit)} · ${w.missed} open mistake${w.missed === 1 ? '' : 's'}</div></div><div class="bar"><div style="width:${w.score}%;background:${w.score < 60 ? '#ff4d6d' : '#ff8a3d'}"></div></div><b>${letter(w.score)}</b><button class="btn ghost sm" data-act="open-lesson" data-id="${w.id}">Redo</button></div>`).join('')}</div></div>`;
   }
 
   /* ───────── COACH ───────── */
   let coachBusy = false;
   function renderCoach(m) {
     const ai = !!CFG.aiEndpoint;
-    const msgs = S.chat.length ? S.chat : [{ role: 'assistant', content: `Hey ${S.name}! I'm your trading coach 🤖. I know your grades and Arena stats. Ask me about any term, calculation, the market hours, or "what should I work on?"` }];
-    m.innerHTML = `<div class="page coach"><div class="coach-head"><h1>🤖 Coach</h1><span class="pill ${ai ? 'ai' : ''}">${ai ? 'AI mode' : 'Offline coach'}</span>${S.chat.length ? '<button class="btn ghost sm" data-act="clear-chat">Clear chat</button>' : ''}</div>
+    const msgs = S.chat.length ? S.chat : [{ role: 'assistant', content: `Yo ${S.name}! I'm Bro 😎, your trading coach. I know your grades and Arena stats. Ask me about any term, a calculation, the market hours, or "what should I work on?"` }];
+    m.innerHTML = `<div class="page coach"><div class="coach-head"><h1>😎 Ask Bro</h1><span class="pill ${ai ? 'ai' : ''}">${ai ? 'AI mode' : 'Offline coach'}</span>${S.chat.length ? '<button class="btn ghost sm" data-act="clear-chat">Clear chat</button>' : ''}</div>
       <div class="chat" id="chat">${msgs.map(x => `<div class="msg ${x.role}">${md(x.content)}</div>`).join('')}</div>
       <div class="suggest">${['What should I work on?', 'Is the market open?', 'What is VWAP?', 'position size 25000 1% entry 40 stop 39.5', 'My stats'].map(s => `<button class="chip-btn" data-act="ask" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
-      <form class="chat-in" id="chatform"><input id="chatq" autocomplete="off" placeholder="Ask your coach…" maxlength="500"><button class="btn primary" type="submit">Send</button></form>
-      <p class="muted small">Education only, not financial advice. The coach never recommends specific stocks to buy.</p></div>`;
+      <form class="chat-in" id="chatform"><input id="chatq" autocomplete="off" placeholder="Ask Bro…" maxlength="500"><button class="btn primary" type="submit">Send</button></form>
+      <p class="muted small">Education only, not financial advice. Bro never recommends specific stocks to buy.</p></div>`;
     const chat = $('#chat'); chat.scrollTop = chat.scrollHeight;
     $('#chatform').addEventListener('submit', e => { e.preventDefault(); const q = $('#chatq').value.trim(); if (q) askCoach(q); });
   }
@@ -394,16 +696,16 @@
         ${cats.map(c => `<button class="chip-btn ${newsFilter === c ? 'on' : ''}" data-act="nf" data-f="${esc(c)}">${esc(c)}</button>`).join('')}</div>
       <div class="news">${items.map(i => `<article class="news-card"><div class="news-meta"><span class="flag">${i.region === 'israel' ? '🇮🇱' : '🌍'}</span><span class="cat cat-${esc(i.cat.split(' ')[0].toLowerCase())}">${esc(i.cat)}</span><span class="muted small">${esc(i.date)}</span></div>
         <h3>${esc(i.title)}</h3><p>${esc(i.summary)}</p><div class="why">💡 <b>Why it matters for traders:</b> ${esc(i.why)}</div>
-        <div class="row"><a class="src" href="${esc(i.url)}" target="_blank" rel="noopener">Source: ${esc(i.source)} ↗</a>${i.lesson ? `<a href="#" class="lesson-link" data-act="open-lesson" data-id="${i.lesson}">📘 Related lesson</a>` : ''}<button class="btn ghost sm" data-act="ask-news" data-t="${esc(i.title)}">Ask coach</button></div></article>`).join('')}</div>
+        <div class="row"><a class="src" href="${esc(i.url)}" target="_blank" rel="noopener">Source: ${esc(i.source)} ↗</a>${i.lesson ? `<a href="#" class="lesson-link" data-act="open-lesson" data-id="${i.lesson}">📘 Related lesson</a>` : ''}<button class="btn ghost sm" data-act="ask-news" data-t="${esc(i.title)}">Ask Bro</button></div></article>`).join('')}</div>
       <h2>🔴 Live sources (check daily)</h2><div class="sources">${N.liveSources.map(s => `<a class="source" href="${esc(s.url)}" target="_blank" rel="noopener"><b>${esc(s.name)}</b><span>${esc(s.desc)}</span></a>`).join('')}</div></div>`;
   }
 
-  /* ───────── PROGRESS ───────── */
+  /* ───────── PROGRESS / STATS ───────── */
   function profileSummary(st) {
     const a = arenaStats(st);
     const done = LESSONS.filter(l => st.lessons[l.id] && st.lessons[l.id].completedAt).length;
     const g = Object.values(st.lessons).filter(x => x.last != null).map(x => x.last);
-    return { name: st.name, xp: st.xp, level: level(st.xp), streak: st.streak.last && daysBetween(st.streak.last, today()) <= 1 ? st.streak.count : 0, done, avg: g.length ? Math.round(g.reduce((x, y) => x + y, 0) / g.length) : 0, trades: a.trades, exp: +a.expectancy.toFixed(2), totalR: +a.totalR.toFixed(1), at: today() };
+    return { name: st.name, ticker: tickerOf(st), xp: st.xp, level: level(st.xp), streak: liveStreakOf(st), done, avg: g.length ? Math.round(g.reduce((x, y) => x + y, 0) / g.length) : 0, trades: a.trades, exp: +a.expectancy.toFixed(2), totalR: +a.totalR.toFixed(1), at: today() };
   }
   function renderProgress(m) {
     const me = profileSummary(S);
@@ -413,37 +715,34 @@
     const a = arenaStats();
     const last7 = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); const k = today(d); return { k, v: S.dailyXp[k] || 0, l: d.toLocaleDateString('en', { weekday: 'short' }) }; });
     const maxX = Math.max(S.dailyGoal, ...last7.map(x => x.v));
-    m.innerHTML = `<div class="page"><h1>🏆 Progress: ${esc(S.name)}</h1>
+    const mm = M.METHODS[S.method];
+    m.innerHTML = `<div class="page"><h1>📊 Stats: ${esc(S.name)}</h1>
       <div class="stat-grid">
-        <div class="stat"><b>${me.level}</b><span>Level · ${title(me.level)}</span></div><div class="stat"><b>${S.xp}</b><span>Total XP</span></div>
-        <div class="stat"><b>🔥 ${me.streak}</b><span>Streak (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${LESSONS.length}</b><span>Lessons</span></div>
-        <div class="stat"><b>${me.avg}%</b><span>Average grade</span></div><div class="stat"><b>${fmtR(a.expectancy)}</b><span>Arena expectancy (${a.trades} trades)</span></div></div>
+        <div class="stat"><b>${fmt$(price(S.xp))}</b><span>${tickerOf(S)} share price</span></div><div class="stat"><b>${title(me.level)}</b><span>Rank · Lv ${me.level}</span></div>
+        <div class="stat"><b>🟢 ${me.streak}</b><span>Green days (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${LESSONS.length}</b><span>Lessons</span></div>
+        <div class="stat"><b>${letter(me.avg)} · ${me.avg}%</b><span>Average grade</span></div><div class="stat"><b>${fmtR(a.expectancy)}</b><span>Arena expectancy (${a.trades} trades)</span></div></div>
+
+      <h2>🧑‍🏫 Your learning style</h2><div class="banner"><b>${mm.icon} ${esc(mm.name)}</b>: ${esc(mm.tagline)}<div class="muted small">${isOwner() ? 'Change it any time in the 🧪 Lab.' : `Not feeling it? Give the lesson a low rating and tell me why. ${esc(ownerName())} approves changes.`}</div></div>
 
       <h2>📅 This week</h2><div class="week">${last7.map(x => `<div class="wd"><div class="wbar"><div style="height:${Math.round(x.v / maxX * 100)}%" class="${x.v >= S.dailyGoal ? 'hit' : ''}"></div></div><span>${x.l}</span><span class="muted small">${x.v}</span></div>`).join('')}</div>
 
-      <h2>🧠 Mastery by unit</h2><div class="mastery">${COURSE.map(u => { const mm = unitMastery(u); const d = u.lessons.filter(l => lessonDone(l.id)).length; return `<div class="mrow"><span>${u.icon} ${esc(u.title)}</span><div class="bar"><div style="width:${mm || 0}%;background:${u.color}"></div></div><span class="small">${mm == null ? '–' : mm + '%'} · ${d}/${u.lessons.length}</span></div>`; }).join('')}</div>
+      <h2>🧠 Mastery by season</h2><div class="mastery">${COURSE.map(u => { const mm2 = unitMastery(u); const d = u.lessons.filter(l => lessonDone(l.id)).length; return `<div class="mrow"><span>${u.icon} ${esc(u.title)}</span><div class="bar"><div style="width:${mm2 || 0}%;background:${u.color}"></div></div><span class="small">${mm2 == null ? '–' : mm2 + '%'} · ${d}/${u.lessons.length}</span></div>`; }).join('')}</div>
 
-      <h2>🏁 Leaderboard</h2><table class="tbl board"><tr><th>#</th><th>Learner</th><th>Level</th><th>XP</th><th>🔥</th><th>Lessons</th><th>Avg grade</th><th>Arena</th></tr>
-        ${board.map((b, i) => `<tr class="${b.me ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td>${esc(b.name)}${b.me ? ' (you)' : ''}${b.at && !b.me && imported.includes(b) ? ` <span class="muted small">synced ${esc(b.at)}</span>` : ''}</td><td>${b.level}</td><td>${b.xp}</td><td>${b.streak}</td><td>${b.done}</td><td>${b.avg}%</td><td>${fmtR(b.exp)} · ${b.trades}t</td></tr>`).join('')}</table>
-      <div class="share"><div><b>Learning on different devices?</b> Send your friend your <i>share code</i>, and paste theirs here to update the leaderboard.</div>
+      <h2>🏁 The market board</h2><table class="tbl board"><tr><th>#</th><th>Stock</th><th>Price</th><th>Rank</th><th>🟢</th><th>Lessons</th><th>Avg</th><th>Arena</th></tr>
+        ${board.map((b, i) => `<tr class="${b.me ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td><b>${esc(b.ticker || '$' + b.name.slice(0, 4).toUpperCase())}</b> ${esc(b.name)}${b.me ? ' (you)' : ''}${b.at && !b.me && imported.includes(b) ? ` <span class="muted small">synced ${esc(b.at)}</span>` : ''}</td><td class="mono">${fmt$(price(b.xp))}</td><td>${title(b.level)}</td><td>${b.streak}</td><td>${b.done}</td><td>${letter(b.avg)}</td><td>${fmtR(b.exp)} · ${b.trades}t</td></tr>`).join('')}</table>
+      <div class="share"><div><b>Learning on different devices?</b> Send your friend your <i>share code</i>, and paste theirs here to update the board.</div>
         <div class="row"><button class="btn ghost sm" data-act="copy-share">📋 Copy my share code</button><input id="friendcode" placeholder="Paste friend's share code"><button class="btn ghost sm" data-act="add-friend">Add</button></div></div>
 
       <h2>🎖️ Badges</h2><div class="badges">${BADGES.map(b => `<div class="badge ${S.badges[b.id] ? 'got' : ''}" title="${esc(b.desc)}"><span>${b.icon}</span><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>`).join('')}</div>
 
-      <h2>📝 Recent quiz grades</h2>${S.quizLog.length ? `<table class="tbl"><tr><th>Date</th><th>Quiz</th><th>Grade</th></tr>${S.quizLog.slice(0, 15).map(q => `<tr><td>${new Date(q.at).toLocaleDateString('en-GB')}</td><td>${esc(q.title)}</td><td class="${q.score < 80 ? 'bad' : 'good'}">${q.score}% (${q.right}/${q.total})</td></tr>`).join('')}</table>` : '<p class="muted">No quizzes yet.</p>'}
+      <h2>📝 Recent sessions</h2>${S.quizLog.length ? `<table class="tbl"><tr><th>Date</th><th>Session</th><th>Style</th><th>Grade</th></tr>${S.quizLog.slice(0, 15).map(q => `<tr><td>${new Date(q.at).toLocaleDateString('en-GB')}</td><td>${esc(q.title)}</td><td>${q.method && M.METHODS[q.method] ? M.METHODS[q.method].icon : q.kind === 'review' ? '🔁' : ''}</td><td class="${q.score < 80 ? 'bad' : 'good'}">${letter(q.score)} · ${q.score}% (${q.right}/${q.total})</td></tr>`).join('')}</table>` : '<p class="muted">No sessions yet.</p>'}
 
       <h2>⚙️ Settings</h2><div class="settings">
-        <label>Daily XP goal <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
+        <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
         <div class="muted small">Profile: ${esc(S.name)} · age ${esc(S.age)} · ${esc(S.email)}</div>
         <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
         <textarea id="restorebox" hidden placeholder="Paste backup code and press Restore again"></textarea></div></div>`;
     $('#goal').addEventListener('change', e => { S.dailyGoal = +e.target.value; save(); renderTop(); });
-  }
-  const b64e = o => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
-  const b64d = s => JSON.parse(decodeURIComponent(escape(atob(s.trim()))));
-  async function copy(text, okMsg) {
-    try { await navigator.clipboard.writeText(text); toast(okMsg); }
-    catch (e) { const m = $('#modal'); m.innerHTML = `<div class="modal-card"><p>Copy this code:</p><textarea readonly class="codebox">${esc(text)}</textarea><div class="row end"><button class="btn primary" data-r="0">Done</button></div></div>`; m.hidden = false; m.onclick = ev => { if (ev.target.closest('[data-r]')) { m.hidden = true; m.onclick = null; } }; m.querySelector('textarea').select(); }
   }
 
   /* ───────── events ───────── */
@@ -453,37 +752,63 @@
     if (el.tagName === 'A') e.preventDefault();
     switch (act) {
       case 'pick': return pick(el.dataset.id);
-      case 'switch': if (window.TQ_Arena) window.TQ_Arena.pause(); S = null; P = null; $('#overlay').hidden = true; history.replaceState(null, '', location.pathname + location.search); return renderPicker();
+      case 'switch': if (window.TQ_Arena) window.TQ_Arena.pause(); stopTimer(); S = null; P = null; $('#overlay').hidden = true; history.replaceState(null, '', location.pathname + location.search); return renderPicker();
       case 'go': return go(el.dataset.v);
       case 'open-lesson': if (!LBYID[el.dataset.id] || !unlocked(LBYID[el.dataset.id])) return toast('🔒 Finish the earlier lessons first'); return openLesson(el.dataset.id);
       case 'start-review': return openReview();
       case 'sel': return selOpt(el.dataset.i);
-      case 'check': return check();
+      case 'check': return check(false);
+      case 'lock': return lockPredict();
+      case 'more': return moreBubble();
       case 'next': return next();
       case 'done': return closePlayer();
-      case 'quit': if (P && P.pos > 0 && !(await confirmBox('Quit this lesson? Progress in this lesson will be lost.', 'Quit'))) return; return closePlayer();
+      case 'quit': if (P && P.pos > 0 && !P.done && !(await confirmBox('Quit this lesson? Progress in this lesson will be lost.', 'Quit'))) return; return closePlayer();
+      case 'rate': return rate(+el.dataset.n);
+      case 'reason': return pickReason(el.dataset.r);
+      case 'send-reason': return sendReason();
+      case 'lab-now': closePlayer(); return go('lab');
+      case 'tell-owner': { const r = S.myRequest; if (r) sendMsg(requestMessage(r)); return; }
+      case 'use-code': {
+        const r = S.myRequest; const to = r && M.checkApproval(r.id, $('#apprcode').value);
+        if (!to) return toast('That code doesn\'t match this request.');
+        const L = lab(); const lr = L.requests.find(x => x.id === r.id); if (lr) { lr.status = 'approved'; lr.decidedTo = to; saveLab(L); }
+        applyMethodTo(S, to, 'approved'); return render();
+      }
+      case 'dismiss-notice': S.notice = null; save(); return render();
+      case 'approve': return approve(el.dataset.id, ($('#to-' + el.dataset.id) || {}).value);
+      case 'decline': return decline(el.dataset.id);
+      case 'show-code': return showCode(el.dataset.id);
+      case 'add-req': {
+        try {
+          const r = b64d($('#reqcode').value.trim().replace(/^MTBR\./, '')); if (!r.id || !M.METHODS[r.to] || !M.METHODS[r.from]) throw 0;
+          const L = lab(); if (L.requests.some(x => x.id === r.id)) return toast('Already in your Lab');
+          r.status = 'pending'; r.remote = true; L.requests.unshift(r); saveLab(L); toast('📥 Request added'); renderLab($('#main')); renderTop();
+        } catch (err) { toast('That code doesn\'t look right.'); } return;
+      }
+      case 'claude-report': return copy(claudeReport(), '📋 Report copied. Paste it to Claude.');
       case 'ask': return askCoach(el.dataset.q);
       case 'ask-news': go('coach'); return askCoach('Explain this news for a trader: ' + el.dataset.t);
       case 'clear-chat': S.chat = []; save(); return renderCoach($('#main'));
       case 'nf': newsFilter = el.dataset.f; return renderNews($('#main'));
       case 'copy-share': return copy('MTB1.' + b64e(profileSummary(S)), '📋 Share code copied! Send it to your friend.');
       case 'add-friend': {
-        try { const v = $('#friendcode').value.trim(); const f = b64d(v.replace(/^MTB1\./, '')); if (!f.name || typeof f.xp !== 'number') throw 0; if (f.name === S.name) return toast('That\'s your own code 😄'); S.friends[f.name] = f; save(); toast(`✅ ${f.name} added to the leaderboard`); renderProgress($('#main')); }
+        try { const v = $('#friendcode').value.trim(); const f = b64d(v.replace(/^MTB1\./, '')); if (!f.name || typeof f.xp !== 'number') throw 0; if (f.name === S.name) return toast('That\'s your own code 😄'); S.friends[f.name] = f; save(); toast(`✅ ${f.name} added to the board`); renderProgress($('#main')); }
         catch (err) { toast('That code doesn\'t look right.'); } return;
       }
       case 'backup': return copy('MTBK.' + b64e(S), '💾 Backup code copied. Keep it somewhere safe.');
       case 'restore': {
         const box = $('#restorebox'); if (box.hidden) { box.hidden = false; box.focus(); return; }
-        try { const st = b64d(box.value.replace(/^MTBK\./, '')); if (st.id !== S.id) { if (!(await confirmBox(`This backup belongs to "${st.name}". Load it into ${S.name}'s profile anyway?`, 'Load'))) return; st.id = S.id; } S = Object.assign(fresh(CFG.profiles.find(p => p.id === S.id)), st); save(); toast('✅ Progress restored'); render(); }
+        try { const st = b64d(box.value.replace(/^MTBK\./, '')); if (st.id !== S.id) { if (!(await confirmBox(`This backup belongs to "${st.name}". Load it into ${S.name}'s profile anyway?`, 'Load'))) return; st.id = S.id; } S = Object.assign(fresh(profileOf(S.id)), st); save(); toast('✅ Progress restored'); render(); }
         catch (err) { toast('Backup code is invalid.'); } return;
       }
-      case 'reset': if (await confirmBox(`Erase ALL of ${S.name}'s progress (lessons, grades, Arena, XP)? This can't be undone.`, 'Erase')) { const p = CFG.profiles.find(x => x.id === S.id); S = fresh(p); S.onboarded = false; save(); renderOnboarding(); } return;
+      case 'reset': if (await confirmBox(`Erase ALL of ${S.name}'s progress (lessons, grades, Arena, XP)? This can't be undone.`, 'Erase')) { S = fresh(profileOf(S.id)); S.onboarded = false; save(); renderOnboarding(); } return;
     }
   });
   document.addEventListener('keydown', e => {
-    if (!P || $('#overlay').hidden) return;
-    if (e.key === 'Enter' && document.activeElement && document.activeElement.id !== 'numans') { const b = $('#pbtn'); if (b && !b.disabled) { e.preventDefault(); b.click(); } }
-    if (/^[1-4]$/.test(e.key) && !P.checked) { const opts = document.querySelectorAll('.opt'); const o = opts[+e.key - 1]; if (o) selOpt(o.dataset.i); }
+    if (!P || $('#overlay').hidden || P.done) return;
+    if (e.key === 'Enter' && document.activeElement && document.activeElement.id !== 'numans' && document.activeElement.tagName !== 'TEXTAREA') { const b = $('#pbtn'); if (b && !b.disabled) { e.preventDefault(); b.click(); } }
+    const k = e.key.toUpperCase(); const map = { A: 0, B: 1, C: 2, D: 3, 1: 0, 2: 1, 3: 2, 4: 3 };
+    if (k in map && !P.checked && document.activeElement.id !== 'numans') { const opts = document.querySelectorAll('.opt'); const o = opts[map[k]]; if (o) selOpt(o.dataset.i); }
   });
   window.addEventListener('resize', () => { if (view === 'arena' && window.TQ_Arena) window.TQ_Arena.redraw(); });
 
@@ -491,7 +816,7 @@
   window.TQ_App = { get S() { return S; }, save, addXP, toast, confirmBox, esc, fmt$, fmtR, md, checkBadges, arenaStats, go, askCoach: (q) => { go('coach'); askCoach(q); } };
 
   document.title = CFG.appName;
-  // Always ask "who's learning?" when the app opens; the chosen learner's saved progress is loaded.
+  // Always ask "who's on the desk?" when the app opens; the chosen trader's saved progress is loaded.
   history.replaceState(null, '', location.pathname + location.search);
   renderPicker();
 })();

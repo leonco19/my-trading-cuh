@@ -2,10 +2,19 @@
 window.TQ_CONFIG = {
   appName: 'My Trading Bro',
   // Fixed learners for now. Add more objects here later to open it to friends & family.
+  // "ticker" is the learner's own "stock": it climbs as they learn.
   profiles: [
-    { id: 'leon', name: 'Leon', avatar: '🦁', color: '#1cb0f6' },
-    { id: 'barda', name: 'Barda', avatar: '🐺', color: '#ce82ff' },
+    { id: 'leon', name: 'Leon', avatar: '🦁', color: '#4c8dff', ticker: 'LEON' },
+    { id: 'barda', name: 'Barda', avatar: '🐺', color: '#9b6bff', ticker: 'BRDA' },
   ],
+  // The boss: this learner gets the 🧪 Lab, where they approve or decline teaching-method changes.
+  owner: 'leon',
+  // Used to make approval codes (so a code only works for its own request). Change it to any random text.
+  ownerSecret: 'bro-desk-2026',
+  // Teaching method every learner starts with (see js/methods.js): 'chat' | 'predict' | 'cards' | 'rush'
+  defaultMethod: 'chat',
+  // After each lesson, a rating BELOW this many stars makes the app ask "why?".
+  expectedRating: 4,
   // Optional AI coach. Leave empty to use the built-in offline coach.
   // After deploying server/coach-worker.js (see README.md), paste its URL here, e.g.
   // 'https://my-trading-bro-coach.<your-subdomain>.workers.dev'
