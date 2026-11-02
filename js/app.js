@@ -220,7 +220,26 @@
 
   /* ───────── sign in / create account ───────── */
   let authMode = null, authEmail = '';
+  // Invite-only testing: online copies ask for the invite code once per device. Your own PC (localhost) skips it.
+  const INVKEY = 'mtb:v1:invite';
+  const isLocal = () => location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  const needInvite = () => !!CFG.inviteHash && !isLocal() && storeGet(INVKEY) !== CFG.inviteHash;
+  function renderInvite() {
+    document.body.classList.add('no-shell');
+    $('#app').innerHTML = `<div class="picker welcome"><div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div><div class="w-hero">🔐</div><h1>Invite only (for now)</h1>
+      <p class="muted">This app is still being tested. Enter the invite code you got from ${esc(ownerName())}.</p>
+      <form class="onboard" id="invform" novalidate><label>Invite code<input name="code" autocomplete="off" autocapitalize="characters" placeholder="XXXX-0000"></label>
+      <div class="err" id="inv-err"></div><button class="btn primary big" type="submit">Let me in</button></form></div>`;
+    const f = $('#invform'); f.elements.code.focus();
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      const code = f.elements.code.value.trim().toUpperCase().replace(/\s+/g, '');
+      if (code && await sha256(code) === CFG.inviteHash) { storeSet(INVKEY, CFG.inviteHash); renderAuth('welcome'); }
+      else { $('#inv-err').textContent = 'That code isn\'t right. Ask ' + ownerName() + ' for it.'; f.elements.code.select(); }
+    });
+  }
   function renderAuth(mode) {
+    if (needInvite()) return renderInvite();
     document.body.classList.add('no-shell');
     authMode = mode || authMode || 'welcome';
     const list = accounts();

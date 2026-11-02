@@ -13,6 +13,9 @@ window.TQ_CONFIG = {
   ownerEmailHash: '8dd4669a0705065a9b332013cfccc8be75dd757db079bfa760acda8c28eb1859',
   // Used to make approval codes (so a code only works for its own request). Change it to any random text.
   ownerSecret: 'bro-desk-2026',
+  // Invite-only testing: the online version asks for an invite code once per device (SHA-256 of the code).
+  // Set to '' to open the app to everyone. Running it on your own PC (localhost) never asks.
+  inviteHash: '734a25e2b6afc71e3ff532b79e1d81d45ff6d0390eba38f77437abf692b3f8a1',
   // Teaching method every learner starts with (see js/methods.js): 'chat' | 'predict' | 'cards' | 'rush'
   defaultMethod: 'chat',
   // After each lesson, a rating BELOW this many stars makes the app ask "why?".
