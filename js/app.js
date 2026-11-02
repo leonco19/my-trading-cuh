@@ -1,7 +1,7 @@
 /* My Trading Bro – main app (profiles, lessons, teaching methods, ratings & Lab, review, coach, news, progress) */
 (function () {
   'use strict';
-  const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods;
+  const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods, V = window.TQ_Voice;
   const KEY = id => 'mtb:v1:' + id;
   const LAST = 'mtb:v1:lastProfile';
   const LABKEY = 'mtb:v1:lab';
@@ -48,7 +48,7 @@
       v: 1, id: p.id, name: p.name, age: null, email: '', onboarded: false, createdAt: Date.now(),
       xp: 0, dailyXp: {}, streak: { count: 0, last: null, best: 0 }, dailyGoal: CFG.defaultDailyGoal,
       lessons: {}, cards: {}, quizLog: [], reviews: 0,
-      tracks: null, track: null,
+      tracks: null, track: null, voice: { name: '', rate: 1 }, coachVoice: false,
       method: CFG.defaultMethod, ratings: [], myRequest: null, rejected: [], notice: null,
       arena: { balance: CFG.arena.startBalance, start: CFG.arena.startBalance, days: 0, trades: [], equity: [CFG.arena.startBalance], seed: Math.floor(Math.random() * 1e6) },
       chat: [], badges: {}, friends: {},
@@ -192,7 +192,7 @@
   /* ───────── routing ───────── */
   const VIEWS = ['learn', 'arena', 'review', 'coach', 'news', 'progress', 'lab'];
   let view = 'learn';
-  function go(v) { view = VIEWS.includes(v) ? v : 'learn'; if (view === 'lab' && !isOwner()) view = 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
+  function go(v) { V.stop(); coachTalk = false; view = VIEWS.includes(v) ? v : 'learn'; if (view === 'lab' && !isOwner()) view = 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (S && S.onboarded && h !== view && VIEWS.includes(h)) go(h); });
 
   /* ───────── profile picker & onboarding ───────── */
@@ -214,7 +214,6 @@
       <form class="onboard" id="onboard" novalidate>
         <label>Your name<input name="name" required maxlength="30" value="${esc(S.name)}"></label>
         <label>Age<input name="age" type="number" min="10" max="99" required placeholder="e.g. 17"></label>
-        <label>Email<input name="email" type="email" required placeholder="you@example.com"></label>
         <p class="muted small">🔒 Stored only in this browser on this device. It isn't sent anywhere.</p>
         <div class="err" id="ob-err"></div>
         <button class="btn primary big" type="submit">Open my desk 🚀</button>
@@ -222,17 +221,17 @@
       </form></div>`;
     $('#onboard').addEventListener('submit', e => {
       e.preventDefault();
-      const f = new FormData(e.target); const name = String(f.get('name')).trim(); const age = +f.get('age'); const email = String(f.get('email')).trim();
-      const err = !name ? 'Please enter your name.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Please enter a valid email.' : '';
+      const f = new FormData(e.target); const name = String(f.get('name')).trim(); const age = +f.get('age');
+      const err = !name ? 'Please enter your name.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
       if (err) { $('#ob-err').textContent = err; return; }
-      Object.assign(S, { name, age, email, onboarded: true }); save();
+      Object.assign(S, { name, age, onboarded: true }); save();
       document.body.classList.remove('no-shell');
       if (age < 18) toast('🎮 Simulator mode: practice now, real money at 18', 'level');
       go('learn');
     });
   }
   function pick(id) {
-    S = load(id); storeSet(LAST, id);
+    S = load(id); storeSet(LAST, id); V.set(S.voice);
     if (!S.onboarded) return renderOnboarding();
     syncRequest();
     document.body.classList.remove('no-shell');
@@ -335,7 +334,7 @@
     if (missed + due) html += `<div class="banner warn">🔁 <b>${missed + due} card${missed + due > 1 ? 's' : ''} ready to review</b>${missed ? ` (${missed} you missed${due ? `, ${due} due so you don't forget` : ''})` : ' (due so you don\'t forget)'}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
     if (myTracks().length > 1) html += `<div class="track-tabs">${myTracks().map(t => { const T = TBYID[t], seq = trackSeq(t), d = seq.filter(x => lessonDone(x.id)).length; return `<button class="ttab ${t === tid ? 'on' : ''}" data-act="set-track" data-id="${t}" style="--tc:${T.color}">${T.icon} ${esc(T.name)} <small>${d}/${seq.length}</small></button>`; }).join('')}</div>`;
     if (nl) html += `<section class="next-card" style="--uc:${nl.unit.color}"><div class="nc-icon">${nl.icon}</div><div class="nc-body"><div class="nc-kicker">NEXT UP · ${esc(tr.name.toUpperCase())} · SEASON ${units.indexOf(nl.unit) + 1}</div><h2>${esc(nl.title)}</h2>
-        <div class="muted small">${methodChip(S.method)} ${esc(M.METHODS[S.method].tagline)}</div></div><button class="btn primary big" data-act="open-lesson" data-id="${nl.id}">Start ▶</button></section>`;
+        <div class="muted small">${methodChip(S.method)} ${esc(M.METHODS[S.method].tagline)}</div></div><div class="nc-btns"><button class="btn primary big" data-act="open-lesson" data-id="${nl.id}">Start ▶</button>${S.method !== 'voice' && V.canSpeak ? `<button class="btn ghost" data-act="open-voice" data-id="${nl.id}" title="Try this lesson with the Voice Teacher">🎧 Listen instead</button>` : ''}</div></section>`;
     else html += `<div class="banner good">🎓 <b>You finished the ${esc(tr.name)} track!</b> Keep it sharp in Review${myTracks().length < TRACKS.length ? ', or add another track in Stats' : ''}.</div>`;
     units.forEach((u, ui) => {
       const open = u.lessons.some(l => unlocked(l)), done = u.lessons.filter(l => lessonDone(l.id)).length, mast = unitMastery(u);
@@ -355,9 +354,10 @@
   let P = null; // player state
   const REPLIES = ['Got it 👍', 'Makes sense', 'Ok, and?', 'Go on…', 'Sick 🔥', 'Next one', 'Easy 😎', 'Say less'];
   const RUSH_SECS = { mcq: 25, tf: 15, num: 45 };
-  function openLesson(id) {
+  function openLesson(id, methodOverride) {
     const l = LBYID[id]; if (!l || !unlocked(l)) return;
-    const method = S.method;
+    V.stop();
+    const method = methodOverride || S.method;
     const steps = M.buildSteps(l, method).map(s => Object.assign(s, s.ci != null ? { c: l.cards[s.ci], key: l.id + ':' + s.ci } : {}));
     P = { kind: 'lesson', lesson: l, method, steps, queue: steps.map((_, i) => i), pos: 0, first: {}, marks: [], mistakes: [], predicts: {}, combo: 0, bestCombo: 0, bub: 1 };
     renderPlayer();
@@ -379,7 +379,7 @@
     renderPlayer();
   }
   function stopTimer() { if (P && P.timer) { clearInterval(P.timer); P.timer = null; } }
-  function closePlayer() { stopTimer(); P = null; $('#overlay').hidden = true; $('#overlay').innerHTML = ''; render(); }
+  function closePlayer() { stopTimer(); V.stop(); P = null; $('#overlay').hidden = true; $('#overlay').innerHTML = ''; render(); }
   const curStep = () => { const i = P.queue[P.pos]; return { i, s: P.steps[i] }; };
 
   function candles() {
@@ -423,7 +423,10 @@
       if (P.method === 'rush') body = `<div class="timer"><div id="tbar"></div></div>` + body;
       btn = { act: 'check', label: 'Check', disabled: true };
     }
-    o.innerHTML = `<div class="player m-${P.method}"><div class="ptop"><button class="x" data-act="quit" title="Quit">✕</button>${candles()}
+    V.stop();
+    const vbtn = P.method === 'voice' ? `<button class="x spk" data-act="voice-pause" title="${P.vPaused ? 'Play' : 'Pause'}">${P.vPaused ? '▶️' : '⏸️'}</button>` : V.canSpeak ? '<button class="x spk" data-act="read-aloud" title="Read this out loud">🔊</button>' : '';
+    if (P.method === 'voice') body = `<div class="vstat" id="vstat">${P.vPaused ? '⏸️ Paused. Tap ▶️ to continue.' : '🎧 Bro is talking…'}</div>` + body;
+    o.innerHTML = `<div class="player m-${P.method}"><div class="ptop"><button class="x" data-act="quit" title="Quit">✕</button>${candles()}${vbtn}
         ${P.combo >= 2 ? `<span class="combo">🔥 x${P.combo}</span>` : ''}<span class="ptitle">${P.lesson.icon} ${esc(P.lesson.title)}${mm ? ` · ${mm.icon} ${esc(mm.name)}` : ''}</span></div>
       <div class="pbody">${body}<div id="fb"></div></div>
       <div class="pfoot"><button class="btn ${btn.reply ? 'reply' : 'primary'} big" id="pbtn" data-act="${btn.act}" ${btn.disabled ? 'disabled' : ''}>${btn.label}</button></div></div>`;
@@ -439,6 +442,105 @@
         if (left <= 0) { stopTimer(); check(true); }
       }, 100);
     }
+    if (P.method === 'voice' && !P.vPaused) { const st = s; setTimeout(() => { if (P && !P.done && curStep().s === st) voiceStep(); }, 300); }
+  }
+
+  /* ───────── 🎧 Voice Teacher ───────── */
+  let coachTalk = false;
+  const vstat = html => { const el = $('#vstat'); if (el) el.innerHTML = html; };
+  const noEmoji = t => V.clean(String(t || '').replace(/<[^>]+>/g, ' '));
+  const answerText = c => c.t === 'mcq' ? `${'ABCD'[c.a]}, ${c.opts[c.a]}` : c.t === 'tf' ? (c.a ? 'true' : 'false') : `${c.a} ${c.suffix || ''}`;
+  const hintFor = c => c.t === 'mcq' ? 'Say A, B, C or D.' : c.t === 'tf' ? 'Say true or false.' : 'Say the number.';
+  function voiceStep() {
+    if (!P || P.done || P.method !== 'voice' || P.vPaused) return;
+    const { i, s } = curStep(); const c = s.c;
+    const still = () => P && !P.done && !P.vPaused && curStep().s === s;
+    if (s.k === 'chat') {
+      const bs = M.bubbles(c.html);
+      vstat('🎧 Bro is talking… <span class="muted small">(tap the reply button to skip ahead)</span>');
+      V.speak((P.bub === 1 ? c.title + '. ' : '') + V.toSpeech(bs[P.bub - 1]), { onend: () => setTimeout(() => { if (!still()) return; if (P.bub < bs.length) moreBubble(); else next(); }, 450) });
+    } else if (s.k === 'q') {
+      if (P.checked) return;
+      const opts = c.t === 'mcq' ? ' ' + c.opts.map((o, k) => `${'ABCD'[k]}: ${o}.`).join(' ') : c.t === 'tf' ? ' True or false?' : '';
+      const lead = P.first[i] === false ? 'Second chance.' : pickOne(['Quick check.', 'Your turn.', 'Question for you.', 'Okay, quiz time.']);
+      vstat('🎧 Bro is asking…');
+      V.speak(`${lead} ${c.q}${opts}`, { onend: () => { if (still()) voiceListen(s, 0); } });
+    } else {
+      V.speak((c && c.title ? c.title + '. ' : '') + V.toSpeech(c ? c.html : ''), { onend: () => setTimeout(() => { if (still()) next(); }, 450) });
+    }
+  }
+  function voiceListen(s, tries) {
+    if (!P || P.checked || curStep().s !== s) return;
+    const c = s.c;
+    if (!V.canListen || P.noMic) { vstat('👆 Tap your answer. <span class="muted small">(Voice answers need Edge or Chrome with a microphone.)</span>'); return; }
+    vstat(`🎤 <b>Listening…</b> ${hintFor(c)} <span class="muted small">You can also say "repeat", or just tap.</span>`);
+    let handled = false;
+    V.listen({
+      interim: true,
+      oninterim: t => vstat(`🎤 “${esc(t)}”`),
+      onresult: (t, alts) => {
+        handled = true;
+        if (!P || P.checked || curStep().s !== s) return;
+        const a = V.parseAnswer(c, alts);
+        if (a && a.i != null) { vstat(`🎤 You said: “${esc(t)}”`); selOpt(a.i); check(false); }
+        else if (a && a.n != null) { vstat(`🎤 You said: “${esc(t)}”`); const ni = $('#numans'); if (ni) ni.value = a.n; check(false); }
+        else if (a && a.cmd === 'repeat') voiceStep();
+        else if (a && a.cmd === 'dunno') { P.gaveUp = true; check(true); }
+        else if (a && a.cmd === 'pause') togglePause();
+        else if (tries < 2) { vstat(`🎤 Heard “${esc(t)}”…`); V.speak(`Sorry, I didn't catch that. ${hintFor(c)}`, { onend: () => voiceListen(s, tries + 1) }); }
+        else vstat(`👆 Didn't get that. Tap your answer, or <button class="btn ghost sm" data-act="voice-listen">🎤 Try again</button>`);
+      },
+      onerror: err => {
+        if (err === 'not-allowed' || err === 'service-not-allowed') { P.noMic = true; vstat('🎤 The microphone is blocked. Tap your answer, or allow the mic in the browser (the icon in the address bar).'); }
+        else if (err === 'network') { P.noMic = true; vstat('🌐 Voice answers need internet. Tap your answer.'); }
+      },
+      onend: got => {
+        if (got || handled || !P || P.checked || P.noMic || curStep().s !== s) return;
+        if (tries < 2) voiceListen(s, tries + 1);
+        else vstat(`👆 Tap your answer, or <button class="btn ghost sm" data-act="voice-listen">🎤 Talk</button>`);
+      },
+    });
+  }
+  function voiceFeedback(ok, head, c) {
+    const s = curStep().s;
+    const text = `${noEmoji(head)}. ${ok ? '' : `The answer is ${answerText(c)}. `}${c.why || ''}`;
+    vstat(ok ? '✅ Nice. Moving on…' : '🔁 Listen to why…');
+    V.speak(text, { onend: () => setTimeout(() => { if (P && !P.done && !P.vPaused && curStep().s === s && P.checked) next(); }, 700) });
+  }
+  function togglePause() {
+    if (!P) return;
+    P.vPaused = !P.vPaused;
+    if (P.vPaused) { V.stop(); const b = $('[data-act=voice-pause]'); if (b) { b.textContent = '▶️'; b.title = 'Play'; } vstat('⏸️ Paused. Tap ▶️ to continue.'); }
+    else { const b = $('[data-act=voice-pause]'); if (b) { b.textContent = '⏸️'; b.title = 'Pause'; } if (P.checked) next(); else voiceStep(); }
+  }
+  function readAloud() {
+    if (V.speaking()) { V.stop(); return; }
+    const { s } = curStep(); const c = s.c;
+    let t = '';
+    if (s.k === 'learn') t = c.title + '. ' + V.toSpeech(c.html);
+    else if (s.k === 'chat') t = c.title + '. ' + M.bubbles(c.html).slice(0, P.bub).map(V.toSpeech).join(' ');
+    else if (s.k === 'sheet') t = s.cis.map(ci => P.lesson.cards[ci].title + '. ' + V.toSpeech(P.lesson.cards[ci].html)).join(' ');
+    else t = c.q + (c.t === 'mcq' ? ' ' + c.opts.map((o, k) => `${'ABCD'[k]}: ${o}.`).join(' ') : c.t === 'tf' ? ' True or false?' : '');
+    const fb = $('#fb .fbx'); if (fb && P.checked) t = noEmoji(fb.textContent);
+    V.speak(t);
+  }
+  function voiceRating() {
+    const mm = M.METHODS[P.method];
+    const msg = `Session closed. You got ${P.done.right} out of ${P.done.total} on the first try. ${noEmoji(P.done.verdict)} How did you like learning with the ${mm.name}? Say a number from one to five, or tap the stars.`;
+    const ask = tries => {
+      if (!P || !P.done || P.rated || P.stars) return;
+      V.listen({ onresult: (t, alts) => { const n = V.parseStars(alts); if (n) rate(n); else if (tries < 1) V.speak('Just say a number from one to five.', { onend: () => ask(tries + 1) }); } , onend: got => { if (!got && tries < 1 && P && !P.stars) ask(tries + 1); } });
+    };
+    V.speak(msg, { onend: () => { if (V.canListen) ask(0); } });
+  }
+  function voiceReason() {
+    if (!V.canListen) return;
+    V.speak("Sorry to hear that. What didn't work for you? Tell me in a sentence, or tap a reason.", { onend: () => {
+      V.listen({ interim: true, oninterim: t => { const ta = $('#reason-text'); if (ta) ta.value = t; }, onresult: t => {
+        const ta = $('#reason-text'); if (!ta || P.rated) return; ta.value = t; if (!P.reason) pickReason('other');
+        V.speak('Got it. Tap send if that is right.');
+      } });
+    } });
   }
   function moreBubble() { P.bub++; renderPlayer(); }
   function selOpt(i) {
@@ -483,11 +585,13 @@
     const answer = c.t === 'num' ? `Answer: <b>${c.a}${c.suffix ? ' ' + esc(c.suffix) : ''}</b>. ` : '';
     const called = P.predicts[s.ci];
     const callNote = called != null && firstTime ? (((c.t === 'mcq' ? called === c.a : (called === 1) === c.a)) ? '<div class="callres good">🎯 Your first call was right too!</div>' : '<div class="callres">Your first call was off, and that\'s the point: now it sticks.</div>') : '';
-    const head = timedOut ? '⏰ Time\'s up' : ok ? pickOne(['Clean entry ✅', 'Profit taken 💰', 'Sharp read 🧠', 'In the money 📈', 'Textbook 🎯']) : pickOne(['Stopped out 🛑', 'Not this time', 'Missed the move']);
+    const head = P.gaveUp ? 'No worries 🤝' : timedOut ? '⏰ Time\'s up' : ok ? pickOne(['Clean entry ✅', 'Profit taken 💰', 'Sharp read 🧠', 'In the money 📈', 'Textbook 🎯']) : pickOne(['Stopped out 🛑', 'Not this time', 'Missed the move']);
     $('#fb').innerHTML = `<div class="fbx ${ok ? 'ok' : 'bad'}"><div class="fb-title">${head}${ok && P.combo >= 2 ? ` <span class="combo sm">🔥 x${P.combo}</span>` : ''}</div><div class="fb-why">${ok ? '' : answer}${esc(c.why || '')}</div>${callNote}${!ok && firstTime ? '<div class="muted small">It comes back at the end of this session, and in Review.</div>' : ''}</div>`;
     const t = $('.ptop .combo'); if (t) t.textContent = P.combo >= 2 ? '🔥 x' + P.combo : '';
     const btn = $('#pbtn'); btn.textContent = 'Continue'; btn.dataset.act = 'next'; btn.disabled = false; btn.focus();
     $('#fb').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    P.gaveUp = false;
+    if (P.method === 'voice') voiceFeedback(ok, head, c);
   }
   function next() {
     const { s } = curStep();
@@ -513,7 +617,7 @@
     save(); addXP(xp, P.kind === 'lesson' ? 'Lesson closed' : 'Review');
     const verdict = score >= 90 ? 'Mastered. 🏆' : score >= 80 ? 'Solid session 💪' : score >= 60 ? 'Getting there: the misses are in Review' : 'Rough one. Run it back!';
     const mm = M.METHODS[P.method];
-    P.done = { score };
+    P.done = { score, right, total: qIdx.length, verdict };
     $('#overlay').innerHTML = `<div class="player"><div class="result">
       <div class="sticket"><div class="t-head"><span>🔔 SESSION CLOSED</span><span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
         <h1>${P.lesson.icon} ${esc(P.lesson.title)}</h1>
@@ -525,18 +629,29 @@
         <div class="stars-in">${[1, 2, 3, 4, 5].map(n => `<button class="star" data-act="rate" data-n="${n}" aria-label="${n} stars">★</button>`).join('')}</div><div id="rate-more"></div></div>` : ''}
       <div class="row center">${P.kind === 'lesson' && score < 80 ? `<button class="btn ghost big" data-act="open-lesson" data-id="${P.lesson.id}" id="retrybtn" ${P.kind === 'lesson' ? 'disabled' : ''}>Run it back</button>` : ''}<button class="btn primary big" data-act="done" id="donebtn" ${P.kind === 'lesson' ? 'disabled' : ''}>Continue</button></div>
       ${P.kind === 'lesson' ? '<p class="muted small" id="rate-hint">Rate the lesson style to continue. Your rating shapes how the app teaches you.</p>' : ''}</div></div>`;
+    if (P.method === 'voice' && P.kind === 'lesson') setTimeout(voiceRating, 400);
   }
 
   /* ───────── rating → reason → change request ───────── */
   function unlockFinish() { ['#donebtn', '#retrybtn'].forEach(s => { const b = $(s); if (b) b.disabled = false; }); const h = $('#rate-hint'); if (h) h.remove(); }
   function rate(n) {
     if (!P || !P.done || P.rated) return;
+    if (P.method === 'voice') V.stop();
     document.querySelectorAll('.star').forEach(b => b.classList.toggle('on', +b.dataset.n <= n));
     P.stars = n;
     const box = $('#rate-more');
     if (n >= CFG.expectedRating) {
       P.rated = true; logRating(n);
       box.innerHTML = `<p class="good"><b>${n === 5 ? 'Love that 🙌' : 'Thanks! 👍'}</b> Noted for ${esc(M.METHODS[P.method].name)}.</p>`;
+      if (P.method !== S.method && P.kind === 'lesson') box.innerHTML += `<div class="row center"><button class="btn ghost sm" data-act="want-method" data-m="${P.method}">Make ${M.METHODS[P.method].icon} ${esc(M.METHODS[P.method].name)} my main style</button></div>`;
+      document.querySelectorAll('.star').forEach(b => { b.disabled = true; });
+      if (P.method === 'voice') V.speak(n === 5 ? 'Love that!' : 'Thanks!');
+      return unlockFinish();
+    }
+    if (P.method !== S.method) {
+      // A one-off try of another style: just remember it, don't ask to change the main style.
+      P.rated = true; logRating(n, { trial: true });
+      box.innerHTML = `<p class="muted">Got it, saved. You'll stay on ${methodChip(S.method)}.</p>`;
       document.querySelectorAll('.star').forEach(b => { b.disabled = true; });
       return unlockFinish();
     }
@@ -545,6 +660,7 @@
       <div class="reasons">${M.REASONS.map(r => `<button class="chip-btn" data-act="reason" data-r="${r.id}">${r.label}</button>`).join('')}</div>
       <textarea id="reason-text" maxlength="300" placeholder="Tell me more (optional, unless you picked “Something else”)"></textarea>
       <div class="err" id="reason-err"></div><div class="row end"><button class="btn primary" data-act="send-reason" id="sendreason" disabled>Send</button></div>`;
+    if (P.method === 'voice') voiceReason();
   }
   function pickReason(id) {
     P.reason = id;
@@ -571,20 +687,24 @@
     const rl = M.REASONS.find(r => r.id === P.reason);
     logRating(P.stars, { reason: P.reason, text: res.text, actionable: true });
     P.rated = true;
-    const to = res.to, tm = M.METHODS[to];
-    const r = { id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), learner: S.id, name: S.name, from: S.method, to, stars: P.stars, reason: res.reasonId, reasonLabel: rl.label, text: res.text, why: res.why, lesson: P.lesson.title, at: Date.now(), status: 'pending' };
-    // One open request per learner: a newer complaint replaces the older one.
+    $('#rate-more').innerHTML = requestSentHTML(makeRequest({ to: res.to, stars: P.stars, reason: res.reasonId, reasonLabel: rl.label, text: res.text, why: res.why }), 'Makes sense.', 'Fair point.');
+    if (P.method === 'voice') V.speak(`Fair point. I'll ask to switch you to ${M.METHODS[res.to].name}.`);
+    unlockFinish();
+  }
+  function makeRequest(o) {
+    const r = Object.assign({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), learner: S.id, name: S.name, from: S.method, lesson: P ? P.lesson.title : '', at: Date.now(), status: 'pending' }, o);
+    // One open request per learner: a newer one replaces the older one.
     const L = lab(); L.requests = L.requests.filter(x => !(x.learner === S.id && x.status === 'pending')); L.requests.unshift(r); L.requests = L.requests.slice(0, 100); saveLab(L);
     S.myRequest = r; save();
-    if (isOwner()) {
-      $('#rate-more').innerHTML = `<div class="banner good">🧪 <b>Makes sense.</b> I'd switch you to ${methodChip(to)} because ${esc(res.why)}. It's waiting in your <b>Lab</b> for your OK.
-        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-act="lab-now">Open Lab</button></div></div>`;
-    } else {
-      $('#rate-more').innerHTML = `<div class="banner good">📨 <b>Fair point.</b> I want to switch you to ${methodChip(to)} because ${esc(res.why)}. ${esc(ownerName())} has to OK it first.
+    return r;
+  }
+  function requestSentHTML(r, ownerHead, learnerHead) {
+    return isOwner()
+      ? `<div class="banner good">🧪 <b>${ownerHead}</b> I'd switch you to ${methodChip(r.to)} because ${esc(r.why)}. It's waiting in your <b>Lab</b> for your OK.
+        <div class="row" style="margin-top:8px"><button class="btn primary sm" data-act="lab-now">Open Lab</button></div></div>`
+      : `<div class="banner good">📨 <b>${learnerHead}</b> I want to switch you to ${methodChip(r.to)} because ${esc(r.why)}. ${esc(ownerName())} has to OK it first.
         <div class="row" style="margin-top:8px"><button class="btn primary sm" data-act="tell-owner">📲 Message ${esc(ownerName())}</button></div>
         <div class="muted small">On the same device? ${esc(ownerName())} will see it in the Lab automatically.</div></div>`;
-    }
-    unlockFinish();
   }
 
   /* ───────── LAB (owner only): approve method changes ───────── */
@@ -678,7 +798,8 @@
     m.innerHTML = `<div class="page coach"><div class="coach-head"><h1>😎 Ask Bro</h1><span class="pill ${ai ? 'ai' : ''}">${ai ? 'AI mode' : 'Offline coach'}</span>${S.chat.length ? '<button class="btn ghost sm" data-act="clear-chat">Clear chat</button>' : ''}</div>
       <div class="chat" id="chat">${msgs.map(x => `<div class="msg ${x.role}">${md(x.content)}</div>`).join('')}</div>
       <div class="suggest">${['What should I work on?', 'Is the market open?', 'What is VWAP?', 'position size 25000 1% entry 40 stop 39.5', 'My stats'].map(s => `<button class="chip-btn" data-act="ask" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
-      <form class="chat-in" id="chatform"><input id="chatq" autocomplete="off" placeholder="Ask Bro…" maxlength="500"><button class="btn primary" type="submit">Send</button></form>
+      <form class="chat-in" id="chatform">${V.canListen ? `<button type="button" class="btn ${coachTalk ? 'primary' : 'ghost'} mic" data-act="coach-mic" title="Talk to Bro">🎤</button>` : ''}<input id="chatq" autocomplete="off" placeholder="${V.canListen ? 'Ask Bro, or tap 🎤 and just talk…' : 'Ask Bro…'}" maxlength="500"><button class="btn primary" type="submit">Send</button></form>
+      <div class="row" style="margin-top:8px">${V.canSpeak ? `<button class="chip-btn ${S.coachVoice ? 'on' : ''}" data-act="coach-voice">${S.coachVoice ? '🔊 Bro talks out loud: ON' : '🔇 Bro talks out loud: OFF'}</button>` : ''}<span class="muted small" id="coachstat"></span></div>
       <p class="muted small">Education only, not financial advice. Bro never recommends specific stocks to buy.</p></div>`;
     const chat = $('#chat'); chat.scrollTop = chat.scrollHeight;
     $('#chatform').addEventListener('submit', e => { e.preventDefault(); const q = $('#chatq').value.trim(); if (q) askCoach(q); });
@@ -691,6 +812,24 @@
     const res = await window.TQ_Coach.ask(S.chat, coachCtx());
     S.chat.push({ role: 'assistant', content: res.text }); save(); coachBusy = false;
     if (view === 'coach') renderCoach($('#main'));
+    if (view === 'coach' && S.coachVoice) {
+      const st = $('#coachstat'); if (st) st.textContent = '😎 Bro is talking… (tap 🎤 to stop)';
+      V.speak(res.text, { onend: () => { const st2 = $('#coachstat'); if (st2) st2.textContent = ''; if (coachTalk && view === 'coach') coachListen(); } });
+    }
+  }
+  function coachListen() {
+    const st = $('#coachstat'), inp = $('#chatq');
+    if (st) st.textContent = '🎤 Listening… (say "stop" to end)';
+    V.listen({
+      interim: true,
+      oninterim: t => { if (inp) inp.value = t; },
+      onresult: t => {
+        if (/^(stop|bye|goodbye|that'?s all|thanks bro|thank you)\b/i.test(t.trim())) { coachTalk = false; if (st) st.textContent = ''; V.speak('Anytime. Later, ' + S.name + '!'); renderCoach($('#main')); return; }
+        askCoach(t);
+      },
+      onerror: err => { coachTalk = false; if (st) st.textContent = err === 'not-allowed' ? '🎤 The microphone is blocked. Allow it in the browser to talk to Bro.' : err === 'network' ? '🌐 Talking needs internet.' : ''; },
+      onend: got => { if (!got) { coachTalk = false; const b = $('[data-act=coach-mic]'); if (b) b.className = 'btn ghost mic'; if (st && /Listening/.test(st.textContent)) st.textContent = ''; } },
+    });
   }
 
   /* ───────── NEWS ───────── */
@@ -747,12 +886,19 @@
 
       <h2>📝 Recent sessions</h2>${S.quizLog.length ? `<table class="tbl"><tr><th>Date</th><th>Session</th><th>Style</th><th>Grade</th></tr>${S.quizLog.slice(0, 15).map(q => `<tr><td>${new Date(q.at).toLocaleDateString('en-GB')}</td><td>${esc(q.title)}</td><td>${q.method && M.METHODS[q.method] ? M.METHODS[q.method].icon : q.kind === 'review' ? '🔁' : ''}</td><td class="${q.score < 80 ? 'bad' : 'good'}">${letter(q.score)} · ${q.score}% (${q.right}/${q.total})</td></tr>`).join('')}</table>` : '<p class="muted">No sessions yet.</p>'}
 
+      <h2>🎧 Bro's voice</h2>${V.canSpeak ? `<div class="settings"><div class="row"><select id="vname"><option value="">Best available voice</option>${V.englishVoices().map(v => `<option value="${esc(v.name)}" ${v.name === (S.voice || {}).name ? 'selected' : ''}>${esc(v.name.replace(/^Microsoft /, '').replace(/ - English.*$/, ''))} (${esc(v.lang)})</option>`).join('')}</select>
+        <select id="vrate">${[[0.85, 'Slow'], [1, 'Normal'], [1.15, 'Fast'], [1.3, 'Very fast']].map(([r, t]) => `<option value="${r}" ${r === ((S.voice || {}).rate || 1) ? 'selected' : ''}>${t}</option>`).join('')}</select><button class="btn ghost sm" data-act="voice-test">▶ Hear Bro</button></div>
+        <div class="muted small">${V.canListen ? 'Talking back to Bro uses your microphone and needs internet.' : 'This browser can speak but can\'t listen. Use Edge or Chrome to answer by voice.'} The most natural voices are in Microsoft Edge.</div></div>` : '<p class="muted">This browser has no voices. Try Microsoft Edge.</p>'}
+
       <h2>⚙️ Settings</h2><div class="settings">
         <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
-        <div class="muted small">Profile: ${esc(S.name)} · age ${esc(S.age)} · ${esc(S.email)}</div>
+        <div class="muted small">Profile: ${esc(S.name)} · age ${esc(S.age)}</div>
         <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
         <textarea id="restorebox" hidden placeholder="Paste backup code and press Restore again"></textarea></div></div>`;
     $('#goal').addEventListener('change', e => { S.dailyGoal = +e.target.value; save(); renderTop(); });
+    const vn = $('#vname'), vr = $('#vrate');
+    const setV = () => { S.voice = { name: vn.value, rate: +vr.value }; V.set(S.voice); save(); };
+    if (vn) { vn.addEventListener('change', () => { setV(); V.speak(`Yo ${S.name}, this is my new voice.`); }); vr.addEventListener('change', () => { setV(); V.speak('This is how fast I talk now.'); }); }
   }
 
   /* ───────── events ───────── */
@@ -775,6 +921,23 @@
       case 'check': return check(false);
       case 'lock': return lockPredict();
       case 'more': return moreBubble();
+      case 'open-voice': if (!LBYID[el.dataset.id] || !unlocked(LBYID[el.dataset.id])) return; return openLesson(el.dataset.id, 'voice');
+      case 'voice-pause': return togglePause();
+      case 'voice-listen': { const st = curStep().s; return voiceListen(st, 1); }
+      case 'read-aloud': return readAloud();
+      case 'voice-test': return V.speak(`Yo ${S.name}! I'm Bro, your trading teacher. Let's make some smart moves today.`);
+      case 'coach-voice': S.coachVoice = !S.coachVoice; save(); if (!S.coachVoice) V.stop(); return renderCoach($('#main'));
+      case 'coach-mic': {
+        if (coachTalk) { coachTalk = false; V.stop(); return renderCoach($('#main')); }
+        coachTalk = true; V.stop(); if (!S.coachVoice) { S.coachVoice = true; save(); }
+        renderCoach($('#main')); return coachListen();
+      }
+      case 'want-method': {
+        const to = el.dataset.m; if (!M.METHODS[to]) return;
+        if (isOwner()) { applyMethodTo(S, to, 'self'); $('#rate-more').innerHTML = `<p class="good"><b>Done!</b> ${methodChip(to)} is now your main style.</p>`; return; }
+        const r = makeRequest({ to, stars: P ? P.stars : 5, reason: 'liked', reasonLabel: '👍 Loved trying it', text: '', why: M.METHODS[to].pitch });
+        $('#rate-more').innerHTML = requestSentHTML(r, 'Nice.', 'Nice.'); return;
+      }
       case 'next': return next();
       case 'done': return closePlayer();
       case 'quit': if (P && P.pos > 0 && !P.done && !(await confirmBox('Quit this lesson? Progress in this lesson will be lost.', 'Quit'))) return; return closePlayer();

@@ -40,8 +40,14 @@
       science: 'Desirable difficulty + game flow: time pressure and streaks keep your brain fully switched on.',
       pitch: 'it is short, fast and game-like, with a timer and combos',
     },
+    voice: {
+      id: 'voice', letter: 'V', icon: '🎧', name: 'Voice Teacher',
+      tagline: 'Bro talks you through the lesson out loud, asks the questions, and you answer by speaking. Hands-free.',
+      science: 'Hearing + seeing an idea together (dual coding) and answering out loud (the production effect) both make memories stronger.',
+      pitch: 'Bro explains it out loud and you just talk back, no reading needed',
+    },
   };
-  const ORDER = ['chat', 'predict', 'cards', 'rush'];
+  const ORDER = ['chat', 'predict', 'cards', 'rush', 'voice'];
 
   /* ───────── building a session for a method ─────────
    * Returns a list of steps. Card indexes (ci) point into lesson.cards, so grading/review keys stay the same.
@@ -62,7 +68,7 @@
       // Guess question k before idea k, then the graded quiz at the end.
       learn.forEach((ci, k) => { if (qs[k] != null && lesson.cards[qs[k]].t !== 'num') steps.push({ k: 'predict', ci: qs[k] }); steps.push({ k: 'learn', ci }); });
       qs.forEach(ci => steps.push({ k: 'q', ci }));
-    } else if (method === 'chat') {
+    } else if (method === 'chat' || method === 'voice') {
       // Explain one idea, check it right away, then the rest of the questions.
       const used = new Set();
       learn.forEach((ci, k) => { steps.push({ k: 'chat', ci }); if (qs[k] != null) { steps.push({ k: 'q', ci: qs[k] }); used.add(qs[k]); } });
@@ -90,13 +96,14 @@
 
   /* ───────── feedback: reasons, "is it reasonable?", what to switch to ───────── */
   const REASONS = [
-    { id: 'boring', label: '😴 Boring', fix: ['rush', 'predict', 'chat'], why: 'more game-like and faster' },
+    { id: 'boring', label: '😴 Boring', fix: ['rush', 'voice', 'predict', 'chat'], why: 'more game-like and faster' },
     { id: 'long', label: '🐢 Too long / slow', fix: ['rush', 'chat'], why: 'shorter and quicker' },
-    { id: 'text', label: '📚 Too much reading', fix: ['chat', 'rush'], why: 'small chat-sized pieces instead of walls of text' },
+    { id: 'text', label: '📚 Too much reading', fix: ['voice', 'chat', 'rush'], why: 'small chat-sized pieces instead of walls of text' },
     { id: 'confusing', label: '😵 Confusing', fix: ['cards', 'chat'], why: 'the full explanation with examples before any questions' },
     { id: 'easy', label: '🥱 Too easy', fix: ['rush', 'predict'], why: 'more of a challenge' },
     { id: 'hard', label: '🧗 Too hard', fix: ['cards', 'chat'], why: 'more explanation before you get tested' },
     { id: 'guess', label: '🎲 Felt like guessing', fix: ['cards', 'chat'], why: 'you learn the idea first instead of guessing' },
+    { id: 'audio', label: '🔇 Voice didn\'t work for me', fix: ['chat', 'cards'], why: 'reading at your own pace' },
     { id: 'other', label: '✍️ Something else', fix: [], why: '' },
   ];
   const KEYWORDS = [
@@ -107,6 +114,7 @@
     [/easy|simple|קל מדי|קליל/i, 'easy'],
     [/hard|difficult|tough|קשה/i, 'hard'],
     [/guess|random|ניחוש|לנחש/i, 'guess'],
+    [/voice|audio|sound|speak|talk|listen|mic|accent|קול|שמע|מיקרופון|דיבור/i, 'audio'],
     [/fast|rush|time|timer|stress|לחץ|מהר/i, 'hard'],
   ];
   const JUNK = /^(idk|i dont know|i don't know|no|nah|nothing|bad|meh|lol|lmao|whatever|just because|because|cuz|dunno|asdf|qwerty|ok|okay|לא יודע|סתם|כי ככה|לא|אין)$/i;
