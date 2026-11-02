@@ -1,9 +1,9 @@
 /* My Trading Cuh – service worker: makes the app work offline and keeps it up to date.
  * Bump VERSION whenever you change any file. The app's "Check for updates" button compares this number. */
-const VERSION = 'mtb-v17';
+const VERSION = 'mtb-v18';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
-  './js/config.js', './js/content.js', './js/methods.js', './js/voice.js', './js/cloud.js', './js/news.js', './js/charts.js', './js/coach.js', './js/app.js', './js/arena.js',
+  './js/config.js', './js/content.js', './js/methods.js', './js/voice.js', './js/cloud.js', './js/newsbot.js', './news.json', './js/charts.js', './js/coach.js', './js/app.js', './js/arena.js',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png',
 ];
 
