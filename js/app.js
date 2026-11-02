@@ -206,8 +206,8 @@
     { id: 'perfect', icon: '💯', name: 'Perfectionist', desc: 'Score 100% on a lesson', test: () => Object.values(S.lessons).some(x => x.best === 100) },
     { id: 'unit', icon: '🏅', name: 'Season Cleared', desc: 'Finish a whole season', test: () => COURSE.some(u => u.lessons.every(l => lessonDone(l.id))) },
     { id: 'risk', icon: '🛡️', name: 'Risk Manager', desc: 'Finish Risk Management with 90%+ mastery', test: () => { const u = COURSE.find(x => x.id === 'u4'); return u.lessons.every(l => lessonDone(l.id)) && unitMastery(u) >= 90; } },
-    { id: 'streak3', icon: '🟢', name: 'Green Week Start', desc: '3 green days in a row', test: () => S.streak.best >= 3 },
-    { id: 'streak7', icon: '📈', name: 'Bull Run', desc: '7 green days in a row', test: () => S.streak.best >= 7 },
+    { id: 'streak3', icon: '🔥', name: 'On Fire', desc: '3-day streak', test: () => S.streak.best >= 3 },
+    { id: 'streak7', icon: '⚡', name: 'Unstoppable', desc: '7-day streak', test: () => S.streak.best >= 7 },
     { id: 'combo5', icon: '🔥', name: 'Hot Hand', desc: '5 correct in a row in one session', test: () => !!S.badges._combo5 },
     { id: 'review3', icon: '🔁', name: 'Fixer', desc: 'Finish 3 review sessions', test: () => S.reviews >= 3 },
     { id: 'feedback', icon: '🗳️', name: 'Co-Designer', desc: 'Help shape the app with feedback', test: () => (S.ratings || []).some(r => r.reason) },
@@ -467,7 +467,7 @@
     const dx = S.dailyXp[today()] || 0, pct = Math.min(100, Math.round(dx / S.dailyGoal * 100));
     const p = profileOf(S.id);
     t.innerHTML = `<div class="who" data-act="go" data-v="progress" title="Your stats"><span class="avatar sm" style="--pc:${p.color}">${p.avatar}</span><div><b>${esc(S.name)}</b><div class="muted small">${title(lv)} · Lv ${lv}</div></div></div>
-      <div class="chips"><span class="chip tick" title="Total XP">⚡ ${S.xp}${dx ? ` <em>+${dx}</em>` : ''}</span><span class="chip fire" title="Green days in a row">🟢 ${liveStreak()}</span>
+      <div class="chips"><span class="chip tick" title="Total XP">⚡ ${S.xp}${dx ? ` <em>+${dx}</em>` : ''}</span><span class="chip fire" title="Day streak">🔥 ${liveStreak()}</span>
       <span class="chip goal" title="Today's target">${ring(pct)} ${dx}/${S.dailyGoal}</span></div>`;
     const dot = $('#labdot'); if (dot) { const n = pendingCount(); dot.hidden = !n; dot.textContent = n; }
   }
@@ -526,7 +526,7 @@
         <div class="sc-left"><div class="sc-tick">${esc(S.name)}'s desk</div>
           <div class="sc-price">${title(lv)} <span class="muted">Lv ${lv}</span></div>
           <div class="sc-promo"><div class="bar"><div style="width:${Math.round(cur / need * 100)}%"></div></div><span class="muted small">${need - cur} XP to your next promotion</span></div>
-          <div class="sc-meta"><span>⚡ <b>${S.xp}</b> XP</span><span>🟢 <b>${liveStreak()}</b> green day${liveStreak() === 1 ? '' : 's'}</span><span>🎯 <b>${dx}/${S.dailyGoal}</b> today</span><span>${methodChip(S.method)}</span></div></div></section>`;
+          <div class="sc-meta"><span>⚡ <b>${S.xp}</b> XP</span><span>🔥 <b>${liveStreak()}</b> day streak</span><span>🎯 <b>${dx}/${S.dailyGoal}</b> today</span><span>${methodChip(S.method)}</span></div></div></section>`;
     const myAcct = acctOf(S.id);
     if (C.enabled() && myAcct && !myAcct.cloud) html += `<div class="banner sim" id="move-banner">☁️ <b>Your account is only saved on this device.</b> Move it online so it works on your phone <i>and</i> PC, with all your progress. Just type your password:
       <form class="row" id="moveform" style="margin-top:8px"><input type="password" name="pw" placeholder="Your password" autocomplete="current-password" style="flex:1;min-width:140px"><button class="btn primary sm" type="submit">Move online</button></form><div class="err" id="move-err"></div></div>`;
@@ -534,21 +534,11 @@
     if (S.age && S.age < 18) html += `<div class="banner sim">🎮 <b>Simulator mode.</b> Everything here uses virtual money. Build the skill now, so you're ready for real markets at 18.</div>`;
     if (missed + due) html += `<div class="banner warn">🔁 <b>${missed + due} card${missed + due > 1 ? 's' : ''} ready to review</b>${missed ? ` (${missed} you missed${due ? `, ${due} due so you don't forget` : ''})` : ' (due so you don\'t forget)'}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
     if (myTracks().length > 1) html += `<div class="track-tabs">${myTracks().map(t => { const T = TBYID[t], seq = trackSeq(t), d = seq.filter(x => lessonDone(x.id)).length; return `<button class="ttab ${t === tid ? 'on' : ''}" data-act="set-track" data-id="${t}" style="--tc:${T.color}">${T.icon} ${esc(T.name)} <small>${d}/${seq.length}</small></button>`; }).join('')}</div>`;
-    if (nl) html += `<section class="next-card" style="--uc:${nl.unit.color}"><div class="nc-icon">${nl.icon}</div><div class="nc-body"><div class="nc-kicker">NEXT UP · ${esc(tr.name.toUpperCase())} · SEASON ${units.indexOf(nl.unit) + 1}</div><h2>${esc(nl.title)}</h2>
-        <div class="muted small">${methodChip(S.method)} ${esc(M.METHODS[S.method].tagline)}</div></div><div class="nc-btns"><button class="btn primary big" data-act="open-lesson" data-id="${nl.id}">Start ▶</button>${S.method !== 'voice' && V.canSpeak ? `<button class="btn ghost" data-act="open-voice" data-id="${nl.id}" title="Try this lesson with the Voice Teacher">🎧 Listen instead</button>` : ''}</div></section>`;
-    else html += `<div class="banner good">🎓 <b>You finished the ${esc(tr.name)} track!</b> Keep it sharp in Review${myTracks().length < TRACKS.length ? ', or add another track in Stats' : ''}.</div>`;
-    units.forEach((u, ui) => {
-      const open = u.lessons.some(l => unlocked(l)), done = u.lessons.filter(l => lessonDone(l.id)).length, mast = unitMastery(u);
-      html += `<section class="season ${open ? '' : 'locked'}" style="--uc:${u.color}"><header class="season-head"><span class="season-num">S${ui + 1}</span><div><h2>${u.icon} ${esc(u.title)}</h2><div class="muted small">${esc(u.subtitle)}</div></div>
-        <div class="season-prog"><b>${done}/${u.lessons.length}</b>${mast != null ? `<span class="muted small">${letter(mast)} avg</span>` : ''}</div></header><div class="season-bar"><div style="width:${done / u.lessons.length * 100}%"></div></div><div class="lrows">`;
-      u.lessons.forEach(l => {
-        const st = S.lessons[l.id], isDone = lessonDone(l.id), ok = unlocked(l), isCur = l.id === nx;
-        const right = isDone ? `<span class="gbadge ${st.last < 80 ? 'low' : ''}">${letter(st.last)}<small>${st.last}%</small></span>` : isCur ? '<span class="tag-next">NEXT</span>' : ok ? '' : '<span class="lock">🔒</span>';
-        html += `<button class="lrow ${isDone ? 'done' : ''} ${isCur ? 'cur' : ''}" ${ok ? `data-act="open-lesson" data-id="${l.id}"` : 'disabled'}><span class="licon">${l.icon}</span><span class="ltitle">${esc(l.title)}<small>${l.cards.filter(isQ).length} questions · +${l.xp} XP</small></span>${right}</button>`;
-      });
-      html += `</div></section>`;
-    });
+    if (!nl) html += `<div class="banner good">🎓 <b>You finished the ${esc(tr.name)} track!</b> Keep it sharp in Review${myTracks().length < TRACKS.length ? ', or add another track in Stats' : ''}.</div>`;
+    units.forEach((u, ui) => { html += seasonPath(u, ui, nx); });
     m.innerHTML = `<div class="learn">${html}</div>`;
+    const curNode = m.querySelector('.pnode.cur');
+    if (curNode && !renderLearn.scrolled) { renderLearn.scrolled = true; setTimeout(() => curNode.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150); }
     const mf = $('#moveform');
     if (mf) mf.addEventListener('submit', async e => {
       e.preventDefault();
@@ -566,6 +556,78 @@
         b.disabled = false; b.textContent = 'Move online';
         er.textContent = (x && x.code === 'auth/email-already-in-use') ? 'This email is already online. Sign out, then sign in with the password you used for the online account.' : C.friendly(x);
       }
+    });
+  }
+
+  /* The lesson path: round buttons on a winding line, one season after another. */
+  const OFFS = [0, 62, 92, 62, 0, -62, -92, -62], GAP = 136;
+  function seasonPath(u, ui, nx) {
+    const open = u.lessons.some(l => unlocked(l)), done = u.lessons.filter(l => lessonDone(l.id)).length, mast = unitMastery(u);
+    const pts = u.lessons.map((l, li) => ({ l, x: OFFS[(li + ui * 3) % 8], y: 46 + li * GAP }));
+    const H = pts[pts.length - 1].y + 120;
+    let line = '';
+    for (let k = 1; k < pts.length; k++) {
+      const a = pts[k - 1], b = pts[k], lit = lessonDone(a.l.id);
+      line += `<path d="M${a.x + 200} ${a.y + 34} C ${a.x + 200} ${a.y + 34 + GAP / 2}, ${b.x + 200} ${b.y + 34 - GAP / 2}, ${b.x + 200} ${b.y + 34}" class="${lit ? 'lit' : ''}"/>`;
+    }
+    const nodes = pts.map(({ l, x, y }) => {
+      const st = S.lessons[l.id], isDone = lessonDone(l.id), ok = unlocked(l), isCur = l.id === nx;
+      const cls = isDone ? 'done' : isCur ? 'cur' : ok ? 'open' : 'locked';
+      const nq = l.cards.filter(isQ).length;
+      const pop = ok
+        ? `<div class="npop" hidden><h3>${esc(l.title)}</h3><div class="np-meta">${nq} questions · +${l.xp} XP${isDone ? ` · best ${st.best}%` : ''}</div>
+            <button class="btn primary" data-act="open-lesson" data-id="${l.id}">${isDone ? 'Practice again' : `Start +${l.xp} XP`}</button>
+            ${S.method !== 'voice' && V.canSpeak ? `<button class="btn ghost" data-act="open-voice" data-id="${l.id}">🎧 Listen instead</button>` : ''}</div>`
+        : `<div class="npop locked" hidden><h3>${esc(l.title)}</h3><div class="np-meta">🔒 Finish the lesson before this one to unlock it.</div></div>`;
+      return `<div class="pnode-wrap ${cls}" style="left:calc(50% + ${x}px);top:${y}px">${isCur ? '<div class="start-bubble">Start</div>' : ''}
+        <button class="pnode ${cls}" data-act="node" title="${esc(l.title)}">${isDone ? '✓' : ok ? l.icon : '🔒'}</button>${isDone ? `<span class="ngrade ${st.last < 80 ? 'low' : ''}">${letter(st.last)}</span>` : ''}
+        <div class="pnode-label">${esc(l.title)}</div>${pop}</div>`;
+    }).join('');
+    return `<section class="season ${open ? '' : 'locked'}" style="--uc:${u.color}">
+      <header class="season-banner"><div><div class="sb-k">SEASON ${ui + 1}</div><h2>${u.icon} ${esc(u.title)}</h2><div class="sb-sub">${esc(u.subtitle)}</div></div>
+        <div class="sb-prog"><b>${done}/${u.lessons.length}</b>${mast != null ? `<span>${letter(mast)} avg</span>` : ''}</div></header>
+      <div class="ppath" style="height:${H}px"><svg width="400" height="${H}" viewBox="0 0 400 ${H}">${line}</svg>${nodes}</div></section>`;
+  }
+
+  /* ───────── sound effects (made on the fly, no files) ───────── */
+  let AC = null;
+  function tones(list) {
+    if (!S || S.sound === false) return;
+    try {
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+      if (AC.state === 'suspended') AC.resume();
+      const t = AC.currentTime;
+      list.forEach(([f, at, dur, type, vol]) => {
+        const o = AC.createOscillator(), g = AC.createGain();
+        o.type = type || 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(vol || 0.16, t + at + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + at + dur);
+        o.connect(g); g.connect(AC.destination); o.start(t + at); o.stop(t + at + dur + 0.05);
+      });
+    } catch (e) { }
+  }
+  const sfx = {
+    ok: () => tones([[660, 0, 0.12], [990, 0.09, 0.22]]),
+    bad: () => tones([[233, 0, 0.2, 'triangle', 0.2], [175, 0.13, 0.28, 'triangle', 0.18]]),
+    done: () => tones([[523, 0, 0.16], [659, 0.12, 0.16], [784, 0.24, 0.16], [1047, 0.36, 0.4]]),
+    tap: () => tones([[880, 0, 0.05, 'sine', 0.05]]),
+  };
+  function confetti() {
+    const cv = $('#confetti'); if (!cv) return;
+    const ctx = cv.getContext('2d'), W = cv.width = innerWidth, H = cv.height = innerHeight;
+    const cols = ['#00d68f', '#22d3ee', '#ffb627', '#ff4d6d', '#9b6bff', '#4c8dff'];
+    const ps = [...Array(140)].map(() => ({ x: W / 2 + (Math.random() - 0.5) * W * 0.25, y: H * 0.32, vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 14 - 4, r: Math.random() * 7 + 5, c: pickOne(cols), a: Math.random() * 6, va: (Math.random() - 0.5) * 0.35 }));
+    let n = 0;
+    (function frame() {
+      ctx.clearRect(0, 0, W, H);
+      ps.forEach(p => { p.vy += 0.32; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.a += p.va; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore(); });
+      if (++n < 170 && document.body.contains(cv)) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+    })();
+  }
+  function countUp() {
+    document.querySelectorAll('[data-count]').forEach(el => {
+      const to = +el.dataset.count, pre = el.dataset.pre || '', suf = el.dataset.suf || ''; let t0 = null;
+      const step = ts => { t0 = t0 || ts; const k = Math.min(1, (ts - t0) / 900); el.textContent = pre + Math.round(to * (1 - Math.pow(1 - k, 3))) + suf; if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
     });
   }
 
@@ -638,7 +700,7 @@
       const called = P.predicts[s.ci];
       body = `${retry ? '<div class="retry-tag">🔁 Second chance</div>' : ''}${s.from ? `<div class="muted small">From: ${esc(s.from.unit.title)} → ${esc(s.from.title)}</div>` : ''}
         ${called != null && !retry ? `<div class="called">You called: <b>${esc(c.t === 'tf' ? (called === 1 ? 'True' : 'False') : c.opts[called])}</b>. Let's see…</div>` : ''}
-        ${P.method === 'chat' && P.kind === 'lesson' ? bro(pickOne(['Quick check:', 'Your turn:', 'Prove it:', 'Ok, quiz time:'])) : ''}${questionHTML(c, s)}`;
+        <div class="mascot-row"><span class="mascot" id="mascot">${retry ? '💪' : '😎'}</span><div class="m-bubble" id="mbubble">${retry ? 'Second chance. You got this!' : pickOne(['Your turn!', 'Quick check:', 'Prove it 😤', 'Ok, quiz time:', 'Easy one… or is it?'])}</div></div>${questionHTML(c, s)}`;
       if (P.method === 'rush') body = `<div class="timer"><div id="tbar"></div></div>` + body;
       btn = { act: 'check', label: 'Check', disabled: true };
     }
@@ -647,8 +709,8 @@
     if (P.method === 'voice') body = `<div class="vstat" id="vstat">${P.vPaused ? '⏸️ Paused. Tap ▶️ to continue.' : '🎧 Cuh is talking…'}</div>` + body;
     o.innerHTML = `<div class="player m-${P.method}"><div class="ptop"><button class="x" data-act="quit" title="Quit">✕</button>${candles()}${vbtn}
         ${P.combo >= 2 ? `<span class="combo">🔥 x${P.combo}</span>` : ''}<span class="ptitle">${P.lesson.icon} ${esc(P.lesson.title)}${mm ? ` · ${mm.icon} ${esc(mm.name)}` : ''}</span></div>
-      <div class="pbody">${body}<div id="fb"></div></div>
-      <div class="pfoot"><button class="btn ${btn.reply ? 'reply' : 'primary'} big" id="pbtn" data-act="${btn.act}" ${btn.disabled ? 'disabled' : ''}>${btn.label}</button></div></div>`;
+      <div class="pbody">${body}</div>
+      <div class="pfoot" id="pfoot"><div class="fb" id="fb"></div><button class="btn ${btn.reply ? 'reply' : 'primary'} big" id="pbtn" data-act="${btn.act}" ${btn.disabled ? 'disabled' : ''}>${btn.label}</button></div></div>`;
     P.sel = null; P.checked = false;
     if (c && c.chart) requestAnimationFrame(() => { const cv = o.querySelector('.lesson-chart'); if (!cv) return; const spec = window.TQ_Charts.PATTERNS[c.chart.pattern](c.chart.seed); window.TQ_Charts.draw(cv, spec, { vwap: !spec.noVwap }); });
     const ni = $('#numans'); if (ni) { ni.focus(); ni.addEventListener('input', () => { $('#pbtn').disabled = ni.value === ''; }); ni.addEventListener('keydown', e => { if (e.key === 'Enter' && ni.value !== '') $('#pbtn').click(); }); }
@@ -764,7 +826,7 @@
   }
   function moreBubble() { P.bub++; renderPlayer(); }
   function selOpt(i) {
-    if (P.checked) return; P.sel = +i;
+    if (P.checked) return; P.sel = +i; sfx.tap();
     document.querySelectorAll('.opt').forEach(b => b.classList.toggle('sel', b.dataset.i === String(i)));
     $('#pbtn').disabled = false;
   }
@@ -806,10 +868,14 @@
     const called = P.predicts[s.ci];
     const callNote = called != null && firstTime ? (((c.t === 'mcq' ? called === c.a : (called === 1) === c.a)) ? '<div class="callres good">🎯 Your first call was right too!</div>' : '<div class="callres">Your first call was off, and that\'s the point: now it sticks.</div>') : '';
     const head = P.gaveUp ? 'No worries 🤝' : timedOut ? '⏰ Time\'s up' : ok ? pickOne(['Clean entry ✅', 'Profit taken 💰', 'Sharp read 🧠', 'In the money 📈', 'Textbook 🎯']) : pickOne(['Stopped out 🛑', 'Not this time', 'Missed the move']);
-    $('#fb').innerHTML = `<div class="fbx ${ok ? 'ok' : 'bad'}"><div class="fb-title">${head}${ok && P.combo >= 2 ? ` <span class="combo sm">🔥 x${P.combo}</span>` : ''}</div><div class="fb-why">${ok ? '' : answer}${esc(c.why || '')}</div>${callNote}${!ok && firstTime ? '<div class="muted small">It comes back at the end of this session, and in Review.</div>' : ''}</div>`;
+    $('#fb').innerHTML = `<div class="fbx ${ok ? 'ok' : 'bad'}"><div class="fb-ico">${ok ? '✓' : '✕'}</div><div class="fb-text"><div class="fb-title">${head}${ok && P.combo >= 2 ? ` <span class="combo sm">🔥 x${P.combo}</span>` : ''}</div><div class="fb-why">${ok ? '' : answer}${esc(c.why || '')}</div>${callNote}${!ok && firstTime ? '<div class="small fb-note">It comes back at the end of this lesson, and in Review.</div>' : ''}</div></div>`;
+    const pf = $('#pfoot'); if (pf) pf.classList.add(ok ? 'ok' : 'bad');
+    const mz = $('#mascot'), mb = $('#mbubble');
+    if (mz) { mz.textContent = ok ? pickOne(['🤩', '😁', '🥳', '😎']) : pickOne(['😬', '🫣', '😅']); mz.classList.remove('pop'); void mz.offsetWidth; mz.classList.add('pop'); }
+    if (mb) mb.textContent = ok ? (P.combo >= 3 ? `${P.combo} in a row! You're cooking 🔥` : pickOne(['Let\'s gooo!', 'Too easy 😤', 'That\'s my trader!', 'Big brain move 🧠'])) : pickOne(['Happens to the best traders.', 'No stress, learn the why 👇', 'Stopped out, but we bounce back.']);
+    ok ? sfx.ok() : sfx.bad();
     const t = $('.ptop .combo'); if (t) t.textContent = P.combo >= 2 ? '🔥 x' + P.combo : '';
     const btn = $('#pbtn'); btn.textContent = 'Continue'; btn.dataset.act = 'next'; btn.disabled = false; btn.focus();
-    $('#fb').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     P.gaveUp = false;
     if (P.method === 'voice') voiceFeedback(ok, head, c);
   }
@@ -834,21 +900,29 @@
     } else { xp = (P.reviewRight || 0) * 3 + 5; S.reviews++; }
     S.quizLog.unshift({ at: Date.now(), kind: P.kind, id: P.lesson.id || 'review', title: P.lesson.title, score, right, total: qIdx.length, method: P.method });
     S.quizLog = S.quizLog.slice(0, 200);
-    save(); addXP(xp, P.kind === 'lesson' ? 'Lesson closed' : 'Review');
+    const hadToday = S.streak.last === today();
+    save(); addXP(xp, P.kind === 'lesson' ? 'Lesson complete' : 'Review');
+    const streakUp = !hadToday && S.streak.last === today();
     const verdict = score >= 90 ? 'Mastered. 🏆' : score >= 80 ? 'Solid session 💪' : score >= 60 ? 'Getting there: the misses are in Review' : 'Rough one. Run it back!';
     const mm = M.METHODS[P.method];
     P.done = { score, right, total: qIdx.length, verdict };
     $('#overlay').innerHTML = `<div class="player"><div class="result">
-      <div class="sticket"><div class="t-head"><span>🔔 SESSION CLOSED</span><span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
-        <h1>${P.lesson.icon} ${esc(P.lesson.title)}</h1>
-        <div class="t-grade ${score >= 80 ? 'up' : 'low'}">${letter(score)}<small>${score}%</small></div>
-        <div class="res-stats"><div class="rs"><b>${right}/${qIdx.length}</b><span>First try</span></div><div class="rs"><b>🔥 ${P.bestCombo}</b><span>Best combo</span></div><div class="rs"><b class="up">+${xp}</b><span>XP earned</span></div></div>
-        <p class="verdict">${verdict}</p></div>
+      <canvas id="confetti"></canvas>
+      <div class="celebrate"><div class="big-mascot">${score >= 80 ? '🤩' : score >= 60 ? '😎' : '😅'}</div>
+        <h1>${P.kind === 'lesson' ? (score >= 60 ? 'Lesson complete!' : 'Lesson done… run it back?') : 'Review complete!'}</h1>
+        <div class="muted">${P.lesson.icon} ${esc(P.lesson.title)}</div>
+        <div class="tiles"><div class="tile gold"><span>Total XP</span><b data-count="${xp}" data-pre="⚡ ">⚡ 0</b></div>
+          <div class="tile mint"><span>${score >= 90 ? 'Amazing' : score >= 70 ? 'Good' : 'Accuracy'}</span><b data-count="${score}" data-suf="%">0%</b></div>
+          <div class="tile orange"><span>Best combo</span><b>🔥 ${P.bestCombo}</b></div></div>
+        ${streakUp ? `<div class="streak-up"><span class="su-fire">🔥</span><div><b>${liveStreak()} day streak!</b><div class="small">Come back tomorrow to keep it going.</div></div></div>` : ''}
+        <p class="verdict">${verdict} · grade ${letter(score)}</p></div>
       ${P.mistakes.length ? `<div class="mistakes"><h3>📝 Remember these</h3>${P.mistakes.map(x => `<div class="mist"><b>${esc(x.q)}</b><div>${esc(x.why)}</div></div>`).join('')}<p class="muted small">Saved to your <b>Review</b> list.</p></div>` : ''}
       ${P.kind === 'lesson' ? `<div class="rate" id="rate"><h3>How did you like learning with ${mm.icon} ${esc(mm.name)}?</h3>
         <div class="stars-in">${[1, 2, 3, 4, 5].map(n => `<button class="star" data-act="rate" data-n="${n}" aria-label="${n} stars">★</button>`).join('')}</div><div id="rate-more"></div></div>` : ''}
       <div class="row center">${P.kind === 'lesson' && score < 80 ? `<button class="btn ghost big" data-act="open-lesson" data-id="${P.lesson.id}" id="retrybtn" ${P.kind === 'lesson' ? 'disabled' : ''}>Run it back</button>` : ''}<button class="btn primary big" data-act="done" id="donebtn" ${P.kind === 'lesson' ? 'disabled' : ''}>Continue</button></div>
       ${P.kind === 'lesson' ? '<p class="muted small" id="rate-hint">Rate the lesson style to continue. Your rating shapes how the app teaches you.</p>' : ''}</div></div>`;
+    if (score >= 60) { sfx.done(); setTimeout(confetti, 120); }
+    countUp();
     if (P.method === 'voice' && P.kind === 'lesson') setTimeout(voiceRating, 400);
   }
 
@@ -1100,7 +1174,7 @@
     m.innerHTML = `<div class="page"><h1>📊 Stats: ${esc(S.name)}</h1>
       <div class="stat-grid">
         <div class="stat"><b>⚡ ${S.xp}</b><span>Total XP</span></div><div class="stat"><b>${title(me.level)}</b><span>Rank · Lv ${me.level}</span></div>
-        <div class="stat"><b>🟢 ${me.streak}</b><span>Green days (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${myLessons().length}</b><span>Lessons</span></div>
+        <div class="stat"><b>🔥 ${me.streak}</b><span>Day streak (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${myLessons().length}</b><span>Lessons</span></div>
         <div class="stat"><b>${letter(me.avg)} · ${me.avg}%</b><span>Average grade</span></div><div class="stat"><b>${fmtR(a.expectancy)}</b><span>Arena expectancy (${a.trades} trades)</span></div></div>
 
       <h2>🛤️ Your tracks</h2><div class="banner">${myTracks().map(t => `${TBYID[t].icon} <b>${esc(TBYID[t].name)}</b>`).join(' · ')} <button class="btn ghost sm" data-act="change-tracks" style="margin-left:8px">Change</button></div>
@@ -1110,7 +1184,7 @@
 
       <h2>🧠 Mastery by season</h2><div class="mastery">${myUnits().map(u => { const mm2 = unitMastery(u); const d = u.lessons.filter(l => lessonDone(l.id)).length; return `<div class="mrow"><span>${u.icon} ${esc(u.title)}</span><div class="bar"><div style="width:${mm2 || 0}%;background:${u.color}"></div></div><span class="small">${mm2 == null ? '–' : mm2 + '%'} · ${d}/${u.lessons.length}</span></div>`; }).join('')}</div>
 
-      <h2>🏁 Leaderboard</h2><table class="tbl board"><tr><th>#</th><th>Trader</th><th>XP</th><th>Rank</th><th>🟢</th><th>Lessons</th><th>Avg</th><th>Arena</th></tr>
+      <h2>🏁 Leaderboard</h2><table class="tbl board"><tr><th>#</th><th>Trader</th><th>XP</th><th>Rank</th><th>🔥</th><th>Lessons</th><th>Avg</th><th>Arena</th></tr>
         ${board.map((b, i) => `<tr class="${b.me ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td><b>${esc(b.name)}</b>${b.me ? ' (you)' : ''}${b.at && !b.me && imported.includes(b) ? ` <span class="muted small">synced ${esc(b.at)}</span>` : ''}</td><td class="mono">${b.xp}</td><td>${title(b.level)}</td><td>${b.streak}</td><td>${b.done}</td><td>${letter(b.avg)}</td><td>${fmtR(b.exp)} · ${b.trades}t</td></tr>`).join('')}</table>
       <div class="share"><div><b>Learning on different devices?</b> Send your friend your <i>share code</i>, and paste theirs here to update the board.</div>
         <div class="row"><button class="btn ghost sm" data-act="copy-share">📋 Copy my share code</button><input id="friendcode" placeholder="Paste friend's share code"><button class="btn ghost sm" data-act="add-friend">Add</button></div></div>
@@ -1124,6 +1198,7 @@
         <div class="muted small">${V.canListen ? 'Talking back to Cuh uses your microphone and needs internet.' : 'This browser can speak but can\'t listen. Use Edge or Chrome to answer by voice.'} The most natural voices are in Microsoft Edge.</div></div>` : '<p class="muted">This browser has no voices. Try Microsoft Edge.</p>'}
 
       <h2>⚙️ Settings</h2><div class="settings">
+        <div><button class="chip-btn ${S.sound === false ? '' : 'on'}" data-act="toggle-sound">${S.sound === false ? '🔇 Sound effects: OFF' : '🔊 Sound effects: ON'}</button></div>
         <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
         <div class="muted small">Signed in as <b>${esc(S.email)}</b> · ${esc(S.name)} · age ${esc(S.age)}</div>
         <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn ghost sm" data-act="check-updates">🔄 Check for updates</button><span class="muted small" id="appver"></span><button class="btn ghost sm" data-act="switch">🚪 Sign out</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
@@ -1174,6 +1249,7 @@
 
   /* ───────── events ───────── */
   document.addEventListener('click', async e => {
+    if (!e.target.closest('.pnode-wrap')) document.querySelectorAll('.npop:not([hidden])').forEach(x => { x.hidden = true; x.parentElement.classList.remove('popped'); });
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.dataset.act;
     if (el.tagName === 'A') e.preventDefault();
@@ -1202,6 +1278,13 @@
       case 'check': return check(false);
       case 'lock': return lockPredict();
       case 'more': return moreBubble();
+      case 'node': {
+        const w = el.closest('.pnode-wrap'), pop = w && w.querySelector('.npop'), wasOpen = pop && !pop.hidden;
+        document.querySelectorAll('.npop').forEach(x => { x.hidden = true; }); document.querySelectorAll('.pnode-wrap.popped').forEach(x => x.classList.remove('popped'));
+        if (pop && !wasOpen) { pop.hidden = false; w.classList.add('popped'); sfx.tap(); }
+        return;
+      }
+      case 'toggle-sound': S.sound = S.sound === false; save(); if (S.sound) sfx.ok(); return renderProgress($('#main'));
       case 'open-voice': if (!LBYID[el.dataset.id] || !unlocked(LBYID[el.dataset.id])) return; return openLesson(el.dataset.id, 'voice');
       case 'voice-pause': return togglePause();
       case 'voice-listen': { const st = curStep().s; return voiceListen(st, 1); }
