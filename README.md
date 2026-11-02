@@ -2,6 +2,7 @@
 
 A game-style app that teaches day trading from scratch, made for **Leon** and **Barda**.
 
+- 🔐 **Accounts**: sign in with email + password (any password works). Accounts and progress are saved on each device, and passwords are stored only as a salted hash. The boss (Leon) can reset passwords in the 🧪 Lab
 - 🛤️ **Tracks**: each learner picks one or more: ⚡ Day Trading, 🌊 Swing Trading, 🏦 Investing, ₿ Crypto & Bitcoin. Shared seasons (like Risk Management) count in every track
 - 🏠 **Desk**: the seasons of your tracks, in order. XP, green-day streaks, trader ranks and badges
 - 🧑‍🏫 **4 teaching methods**: 💬 Cuh Talk (chat), 🎯 Call It First (guess first), 📖 Deep Dive (full explanation), ⚡ Market Rush (timed, with combos). All of them are built on retrieval practice, and Review uses spaced repetition

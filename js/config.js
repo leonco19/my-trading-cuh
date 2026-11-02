@@ -1,13 +1,16 @@
 /* My Trading Cuh – settings. Change the name here when you pick a new one. */
 window.TQ_CONFIG = {
   appName: 'My Trading Cuh',
-  // Fixed learners for now. Add more objects here later to open it to friends & family.
+  // Old built-in profiles. Their saved progress can be brought into a new account when signing up.
   profiles: [
     { id: 'leon', name: 'Leon', avatar: '🦁', color: '#4c8dff' },
     { id: 'barda', name: 'Barda', avatar: '🐺', color: '#9b6bff' },
   ],
-  // The boss: this learner gets the 🧪 Lab, where they approve or decline teaching-method changes.
+  // The boss gets the 🧪 Lab (approve teaching-style changes, reset passwords on this device).
+  // The boss is the account whose email matches this SHA-256 hash (so the email itself isn't in the code),
+  // or the account that brought over the old "leon" progress.
   owner: 'leon',
+  ownerEmailHash: '8dd4669a0705065a9b332013cfccc8be75dd757db079bfa760acda8c28eb1859',
   // Used to make approval codes (so a code only works for its own request). Change it to any random text.
   ownerSecret: 'bro-desk-2026',
   // Teaching method every learner starts with (see js/methods.js): 'chat' | 'predict' | 'cards' | 'rush'

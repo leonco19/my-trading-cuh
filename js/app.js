@@ -3,7 +3,7 @@
   'use strict';
   const CFG = window.TQ_CONFIG, COURSE = window.TQ_COURSE, M = window.TQ_Methods, V = window.TQ_Voice;
   const KEY = id => 'mtb:v1:' + id;
-  const LAST = 'mtb:v1:lastProfile';
+  const ACCTKEY = 'mtb:v1:accounts', SESSKEY = 'mtb:v1:session';
   const LABKEY = 'mtb:v1:lab';
 
   /* ───────── utils ───────── */
@@ -40,9 +40,31 @@
 
   /* ───────── state ───────── */
   let S = null; // current profile state
-  const profileOf = id => CFG.profiles.find(x => x.id === id);
-  const isOwner = () => S && S.id === CFG.owner;
-  const ownerName = () => (profileOf(CFG.owner) || {}).name || 'the boss';
+  /* Accounts live on this device: email + password (stored only as a salted PBKDF2 hash). */
+  const AVATARS = ['🦁', '🐺', '🦊', '🐯', '🐻', '🦅', '🐬', '🦈', '🐉', '🦄', '🐼', '🐸'];
+  const COLORS = ['#4c8dff', '#9b6bff', '#00d68f', '#ff8a3d', '#ff4d6d', '#22d3ee', '#ffb627', '#ff86d0'];
+  function accounts() { try { return JSON.parse(storeGet(ACCTKEY) || '[]') || []; } catch (e) { return []; } }
+  function saveAccounts(list) { storeSet(ACCTKEY, JSON.stringify(list)); }
+  const acctOf = id => accounts().find(a => a.id === id);
+  const legacyOf = id => (CFG.profiles || []).find(x => x.id === id);
+  const profileOf = id => acctOf(id) || legacyOf(id) || { id, name: 'Trader', avatar: '🙂', color: '#4c8dff' };
+  const isOwnerId = id => { const a = acctOf(id); return id === CFG.owner || !!(a && CFG.ownerEmailHash && a.emailHash === CFG.ownerEmailHash); };
+  const isOwner = () => !!S && isOwnerId(S.id);
+  const ownerName = () => { const a = accounts().find(x => isOwnerId(x.id)); return (a && a.name) || (legacyOf(CFG.owner) || {}).name || 'the boss'; };
+  const hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+  async function sha256(t) {
+    if (window.crypto && crypto.subtle) return hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)));
+    let h = 0x811c9dc5, g = 0x9e3779b9; for (let i = 0; i < t.length; i++) { h = Math.imul(h ^ t.charCodeAt(i), 16777619); g = Math.imul(g ^ h, 2246822519); } return 'x' + (h >>> 0).toString(16) + (g >>> 0).toString(16);
+  }
+  async function hashPw(pw, salt) {
+    if (window.crypto && crypto.subtle) {
+      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+      return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(salt), iterations: 120000, hash: 'SHA-256' }, key, 256));
+    }
+    let x = salt + pw; for (let i = 0; i < 500; i++) x = await sha256(x + pw); return x;
+  }
+  const normEmail = e => String(e || '').trim().toLowerCase();
+  const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   function fresh(p) {
     return {
       v: 1, id: p.id, name: p.name, age: null, email: '', onboarded: false, createdAt: Date.now(),
@@ -86,7 +108,8 @@
     S.xp += n; S.dailyXp[today()] = (S.dailyXp[today()] || 0) + n;
     touchStreak(); checkBadges(); save(); renderTop();
     toast(`⚡ +${n} XP${why ? ' · ' + why : ''}`, 'xp');
-    if (level(S.xp) > before) setTimeout(() => toast(`🚀 Promoted! You're now ${title(level(S.xp))} (Lv ${level(S.xp)})`, 'level'), 600);
+    const lvNow = level(S.xp);
+    if (lvNow > before) setTimeout(() => toast(`🚀 Promoted! You're now ${title(lvNow)} (Lv ${lvNow})`, 'level'), 600);
   }
   /* ───────── grading, mastery & spaced repetition ───────── */
   const DAY = 86400000, BOX_DAYS = [0, 1, 3, 7, 16, 35];
@@ -195,49 +218,111 @@
   function go(v) { V.stop(); coachTalk = false; view = VIEWS.includes(v) ? v : 'learn'; if (view === 'lab' && !isOwner()) view = 'learn'; if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view); render(); }
   window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (S && S.onboarded && h !== view && VIEWS.includes(h)) go(h); });
 
-  /* ───────── profile picker & onboarding ───────── */
-  function renderPicker() {
+  /* ───────── sign in / create account ───────── */
+  let authMode = null, authEmail = '';
+  function renderAuth(mode) {
     document.body.classList.add('no-shell');
-    const cards = CFG.profiles.map(p => {
-      const st = load(p.id);
-      const sub = st.onboarded ? `${title(level(st.xp))} · 🟢 ${liveStreakOf(st)} green days` : 'New trader: tap to start';
-      return `<button class="profile-card" data-act="pick" data-id="${p.id}" style="--pc:${p.color}"><span class="avatar">${p.avatar}</span><span class="pname">${esc(st.onboarded ? st.name : p.name)}</span>
-        <span class="ptick">⚡ <b>${st.xp}</b> XP</span><span class="psub">${esc(sub)}</span></button>`;
-    }).join('');
-    $('#app').innerHTML = `<div class="picker"><div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div><h1>Who's on the desk today?</h1><div class="profiles">${cards}</div>
-      <p class="muted small">Progress is saved in this browser. Use <b>Stats → Backup code</b> to move it to another device.</p></div>`;
+    authMode = mode || authMode || (accounts().length ? 'signin' : 'signup');
+    const list = accounts();
+    const logo = `<div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div>`;
+    if (authMode === 'signin') {
+      $('#app').innerHTML = `<div class="picker">${logo}<h1>Welcome back</h1>
+        ${list.length ? `<div class="quick">${list.map(x => `<button class="qacct" data-act="quick-acct" data-email="${esc(x.email)}" style="--pc:${x.color}"><span class="avatar sm">${x.avatar}</span>${esc(x.name)}</button>`).join('')}</div>` : ''}
+        <form class="onboard" id="authform" novalidate>
+          <label>Email<input name="email" type="email" autocomplete="username" required value="${esc(authEmail)}" placeholder="you@example.com"></label>
+          <label>Password<span class="pw"><input name="password" type="password" autocomplete="current-password" required><button type="button" class="eye" data-act="toggle-pw" title="Show password">👁️</button></span></label>
+          <label class="check"><input type="checkbox" name="stay" checked> Stay signed in on this device</label>
+          <div class="err" id="ob-err"></div>
+          <button class="btn primary big" type="submit">Sign in</button>
+          <p class="muted small center-t">New here? <a href="#" data-act="auth-mode" data-m="signup">Create an account</a></p>
+          <p class="muted small center-t">Forgot your password? ${esc(ownerName())} can reset it in the 🧪 Lab on this device.</p>
+        </form></div>`;
+    } else {
+      const legacy = (CFG.profiles || []).map(p => ({ p, st: (() => { try { return JSON.parse(storeGet(KEY(p.id)) || 'null'); } catch (e) { return null; } })() }))
+        .filter(x => x.st && x.st.onboarded && !acctOf(x.p.id));
+      $('#app').innerHTML = `<div class="picker">${logo}<h1>Create your account</h1><p class="muted">You sign in with your email and password.</p>
+        <form class="onboard" id="authform" novalidate>
+          <label>Email<input name="email" type="email" autocomplete="username" required value="${esc(authEmail)}" placeholder="you@example.com"></label>
+          <label>Password<span class="pw"><input name="password" type="password" autocomplete="new-password" required><button type="button" class="eye" data-act="toggle-pw" title="Show password">👁️</button></span></label>
+          <label>What should Cuh call you?<input name="name" required maxlength="30" placeholder="Your name"></label>
+          <label>Age<input name="age" type="number" min="10" max="99" required placeholder="e.g. 17"></label>
+          <div class="lbl">Pick your avatar</div><div class="avatars">${AVATARS.map((av, i) => `<label class="av-opt"><input type="radio" name="avatar" value="${i}" ${i === list.length % AVATARS.length ? 'checked' : ''}><span>${av}</span></label>`).join('')}</div>
+          ${legacy.length ? `<label>Bring over saved progress?<select name="legacy"><option value="">No, start fresh</option>${legacy.map(x => `<option value="${x.p.id}">${x.p.avatar} ${esc(x.st.name)} · Lv ${level(x.st.xp || 0)} · ${x.st.xp || 0} XP</option>`).join('')}</select></label>` : ''}
+          <label class="check"><input type="checkbox" name="stay" checked> Stay signed in on this device</label>
+          <p class="muted small">🔒 Saved only on this device. Your password is stored scrambled, never as plain text.</p>
+          <div class="err" id="ob-err"></div>
+          <button class="btn primary big" type="submit">Create account 🚀</button>
+          ${list.length ? '<p class="muted small center-t">Already have an account? <a href="#" data-act="auth-mode" data-m="signin">Sign in</a></p>' : ''}
+        </form></div>`;
+    }
+    const f = $('#authform');
+    f.addEventListener('submit', e => { e.preventDefault(); authMode === 'signin' ? doSignIn(f) : doSignUp(f); });
+    const first = f.querySelector(authEmail ? 'input[name=password]' : 'input[name=email]'); if (first) first.focus();
   }
-  function renderOnboarding() {
-    document.body.classList.add('no-shell');
-    const p = profileOf(S.id);
-    $('#app').innerHTML = `<div class="picker"><div class="avatar xl" style="--pc:${p.color}">${p.avatar}</div><h1>Welcome to the desk</h1>
-      <form class="onboard" id="onboard" novalidate>
-        <label>Your name<input name="name" required maxlength="30" value="${esc(S.name)}"></label>
-        <label>Age<input name="age" type="number" min="10" max="99" required placeholder="e.g. 17"></label>
-        <p class="muted small">🔒 Stored only in this browser on this device. It isn't sent anywhere.</p>
-        <div class="err" id="ob-err"></div>
-        <button class="btn primary big" type="submit">Open my desk 🚀</button>
-        <button class="btn ghost" type="button" data-act="switch">← Back</button>
-      </form></div>`;
-    $('#onboard').addEventListener('submit', e => {
-      e.preventDefault();
-      const f = new FormData(e.target); const name = String(f.get('name')).trim(); const age = +f.get('age');
-      const err = !name ? 'Please enter your name.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
-      if (err) { $('#ob-err').textContent = err; return; }
-      Object.assign(S, { name, age, onboarded: true }); save();
-      document.body.classList.remove('no-shell');
-      if (age < 18) toast('🎮 Simulator mode: practice now, real money at 18', 'level');
-      go('learn');
-    });
+  function startSession(id, stay) {
+    try { sessionStorage.setItem(SESSKEY, id); } catch (e) { }
+    storeSet(SESSKEY, stay ? id : '');
+    authEmail = '';
+    enter(id);
   }
-  function pick(id) {
-    S = load(id); storeSet(LAST, id); V.set(S.voice);
-    if (!S.onboarded) return renderOnboarding();
+  async function doSignIn(f) {
+    const err = $('#ob-err'); const email = normEmail(f.email.value), pw = f.password.value;
+    if (!validEmail(email)) { err.textContent = 'Please enter your email.'; return; }
+    if (!pw) { err.textContent = 'Please enter your password.'; return; }
+    const a = accounts().find(x => x.email === email);
+    if (!a) { err.innerHTML = `No account with this email on this device. <a href="#" data-act="auth-mode" data-m="signup">Create one?</a>`; authEmail = email; return; }
+    err.textContent = '';
+    if (await hashPw(pw, a.salt) !== a.hash) { err.textContent = 'Wrong password. Try again.'; f.password.select(); return; }
+    startSession(a.id, f.stay.checked);
+  }
+  async function doSignUp(f) {
+    const err = $('#ob-err'); const E = f.elements; const email = normEmail(E.email.value), pw = E.password.value, name = E.namedItem('name').value.trim(), age = +E.age.value;
+    const e = !validEmail(email) ? 'Please enter a valid email.' : accounts().some(x => x.email === email) ? 'This email already has an account here. Sign in instead.' : !pw ? 'Please choose a password (anything you like).' : !name ? 'Tell Cuh what to call you.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
+    if (e) { err.textContent = e; return; }
+    err.textContent = '';
+    const legacyId = E.legacy ? E.legacy.value : '';
+    const id = legacyId || 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const ai = +((f.querySelector('input[name=avatar]:checked') || {}).value || 0);
+    const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+    const acct = { id, email, name, avatar: AVATARS[ai], color: COLORS[accounts().length % COLORS.length], salt, hash: await hashPw(pw, salt), emailHash: await sha256(email), createdAt: Date.now() };
+    saveAccounts(accounts().concat([acct]));
+    const st = load(id); Object.assign(st, { name, email, age, onboarded: true }); storeSet(KEY(id), JSON.stringify(st));
+    if (age < 18) setTimeout(() => toast('🎮 Simulator mode: practice now, real money at 18', 'level'), 600);
+    startSession(id, E.stay.checked);
+  }
+  function enter(id) {
+    const a = acctOf(id); if (!a) { S = null; return renderAuth('signin'); }
+    S = load(id); V.set(S.voice);
+    Object.assign(S, { name: a.name, email: a.email, onboarded: true }); save();
     syncRequest();
     document.body.classList.remove('no-shell');
     go(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'learn');
     const n = isOwner() ? pendingCount() : 0;
     if (n) setTimeout(() => toast(`🧪 ${n} teaching-method request${n > 1 ? 's' : ''} waiting in your Lab`, 'level'), 500);
+  }
+  function signOut() {
+    try { sessionStorage.removeItem(SESSKEY); } catch (e) { }
+    storeSet(SESSKEY, '');
+    if (S) authEmail = S.email || '';
+    S = null; P = null; $('#overlay').hidden = true;
+    history.replaceState(null, '', location.pathname + location.search);
+    renderAuth('signin');
+  }
+  async function resetPassword(id) {
+    const a = acctOf(id); if (!a) return;
+    const m = $('#modal');
+    m.innerHTML = `<div class="modal-card"><h3>New password for ${esc(a.name)}</h3><p class="muted small">${esc(a.email)}</p><input id="newpw" type="text" placeholder="New password" style="width:100%"><div class="err" id="pwerr"></div>
+      <div class="row end"><button class="btn ghost" data-r="0">Cancel</button><button class="btn primary" data-r="1">Save</button></div></div>`;
+    m.hidden = false; $('#newpw').focus();
+    m.onclick = async e => {
+      const b = e.target.closest('[data-r]'); if (!b && e.target !== m) return;
+      if (b && b.dataset.r === '1') {
+        const pw = $('#newpw').value; if (!pw) { $('#pwerr').textContent = 'Type a new password.'; return; }
+        const list = accounts(); const x = list.find(y => y.id === id); x.salt = hex(crypto.getRandomValues(new Uint8Array(16))); x.hash = await hashPw(pw, x.salt); saveAccounts(list);
+        toast(`🔑 New password saved for ${a.name}`, 'badge');
+      }
+      m.hidden = true; m.onclick = null;
+    };
   }
 
   /* ───────── track picker ───────── */
@@ -259,7 +344,7 @@
     if (isOwner()) nav.push(['lab', '🧪', 'Lab']);
     $('#app').innerHTML = `<div id="shell" data-kind="${want}">
       <nav class="side"><div class="logo"><span class="logo-mark">◢</span> <span>${esc(CFG.appName)}</span></div>${nav.map(([v, i, t]) => `<a href="#${v}" class="nav-${v}" data-act="go" data-v="${v}"><span class="ni">${i}</span><span class="nt">${t}</span>${v === 'lab' ? '<span class="dot" id="labdot" hidden></span>' : ''}</a>`).join('')}
-        <a href="#" class="switch" data-act="switch"><span class="ni">👥</span><span class="nt">Switch trader</span></a></nav>
+        <a href="#" class="switch" data-act="switch"><span class="ni">🚪</span><span class="nt">Sign out</span></a></nav>
       <div class="col"><header class="top" id="top"></header><main id="main"></main></div></div>`;
   }
   function renderTop() {
@@ -267,7 +352,7 @@
     const lv = level(S.xp);
     const dx = S.dailyXp[today()] || 0, pct = Math.min(100, Math.round(dx / S.dailyGoal * 100));
     const p = profileOf(S.id);
-    t.innerHTML = `<div class="who" data-act="switch" title="Switch trader"><span class="avatar sm" style="--pc:${p.color}">${p.avatar}</span><div><b>${esc(S.name)}</b><div class="muted small">${title(lv)} · Lv ${lv}</div></div></div>
+    t.innerHTML = `<div class="who" data-act="go" data-v="progress" title="Your stats"><span class="avatar sm" style="--pc:${p.color}">${p.avatar}</span><div><b>${esc(S.name)}</b><div class="muted small">${title(lv)} · Lv ${lv}</div></div></div>
       <div class="chips"><span class="chip tick" title="Total XP">⚡ ${S.xp}${dx ? ` <em>+${dx}</em>` : ''}</span><span class="chip fire" title="Green days in a row">🟢 ${liveStreak()}</span>
       <span class="chip goal" title="Today's target">${ring(pct)} ${dx}/${S.dailyGoal}</span></div>`;
     const dot = $('#labdot'); if (dot) { const n = pendingCount(); dot.hidden = !n; dot.textContent = n; }
@@ -275,8 +360,7 @@
   function ring(p) { const r = 9, c = 2 * Math.PI * r; return `<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="${r}" fill="none" stroke="#263052" stroke-width="3"/><circle cx="11" cy="11" r="${r}" fill="none" stroke="#00d68f" stroke-width="3" stroke-dasharray="${c * p / 100} ${c}" transform="rotate(-90 11 11)" stroke-linecap="round"/></svg>`; }
 
   function render() {
-    if (!S) return renderPicker();
-    if (!S.onboarded) return renderOnboarding();
+    if (!S) return renderAuth();
     if (!S.tracks || !S.tracks.length) return renderTrackPicker();
     renderShell(); renderTop();
     document.querySelectorAll('nav.side a').forEach(a => a.classList.toggle('on', a.dataset.v === view));
@@ -525,6 +609,7 @@
     V.speak(t);
   }
   function voiceRating() {
+    if (!P || !P.done) return;
     const mm = M.METHODS[P.method];
     const msg = `Session closed. You got ${P.done.right} out of ${P.done.total} on the first try. ${noEmoji(P.done.verdict)} How did you like learning with the ${mm.name}? Say a number from one to five, or tap the stars.`;
     const ask = tries => {
@@ -731,7 +816,7 @@
   }
   function claudeReport() {
     const lines = [`${CFG.appName} – feedback report (${today()})`, ''];
-    CFG.profiles.map(p => load(p.id)).filter(st => st.onboarded).forEach(st => {
+    accounts().map(a => load(a.id)).filter(st => st.onboarded).forEach(st => {
       lines.push(`## ${st.name} – current method: ${M.METHODS[st.method].name}`);
       ratingStats(st).filter(x => x.n).forEach(x => lines.push(`- ${M.METHODS[x.m].name}: ${x.avg.toFixed(1)}★ avg over ${x.n} lessons`));
       (st.ratings || []).filter(r => r.reason).slice(-10).forEach(r => lines.push(`- ${r.stars}★ "${r.title}" (${M.METHODS[r.method].name}): ${(M.REASONS.find(x => x.id === r.reason) || {}).label || r.reason}${r.text ? ' – "' + r.text + '"' : ''}`));
@@ -743,7 +828,7 @@
   function renderLab(m) {
     if (!isOwner()) return go('learn');
     const L = lab(), pend = L.requests.filter(r => r.status === 'pending'), old = L.requests.filter(r => r.status !== 'pending').slice(0, 8);
-    const learners = CFG.profiles.map(p => load(p.id)).map(st => (st.id === S.id ? S : st)).filter(st => st.onboarded);
+    const learners = accounts().map(a => (a.id === S.id ? S : load(a.id))).filter(st => st.onboarded);
     const opts = sel => M.ORDER.map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${M.METHODS[k].icon} ${M.METHODS[k].name}</option>`).join('');
     const reqCard = r => `<div class="lreq"><div class="lreq-head"><b>${esc(r.name)}</b> rated ${methodChip(r.from)} <span class="stars-sm">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span><span class="muted small">${new Date(r.at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })} · "${esc(r.lesson)}"</span></div>
       <div class="lreq-reason">${esc(r.reasonLabel)}${r.text ? ` <q>${esc(r.text)}</q>` : ''}</div>
@@ -755,7 +840,7 @@
       <div class="share"><div><b>Got a request code on WhatsApp?</b> Paste it here (it starts with <code>MTBR.</code>).</div><div class="row"><input id="reqcode" placeholder="MTBR.…"><button class="btn ghost sm" data-act="add-req">Add request</button></div></div>
       ${old.length ? `<h2>🗂️ Decided</h2><table class="tbl"><tr><th>When</th><th>Who</th><th>Change</th><th>Result</th><th></th></tr>${old.map(r => `<tr><td>${new Date(r.decidedAt || r.at).toLocaleDateString('en-GB')}</td><td>${esc(r.name)}</td><td>${M.METHODS[r.from].icon} → ${M.METHODS[r.decidedTo || r.to].icon} ${esc(M.METHODS[r.decidedTo || r.to].name)}</td><td class="${r.status === 'approved' ? 'good' : 'muted'}">${r.status}</td><td>${r.status === 'approved' && r.learner !== S.id ? `<button class="btn ghost sm" data-act="show-code" data-id="${r.id}">Code</button>` : ''}</td></tr>`).join('')}</table>` : ''}
       <h2>🎛️ Teaching style per trader</h2><p class="muted small">You're the boss: you can also switch anyone directly.</p>
-      <div class="lab-grid">${learners.map(st => `<div class="lab-card"><div class="row"><span class="avatar sm" style="--pc:${profileOf(st.id).color}">${profileOf(st.id).avatar}</span><b>${esc(st.name)}</b><select data-set-method="${st.id}">${opts(st.method)}</select></div>
+      <div class="lab-grid">${learners.map(st => `<div class="lab-card"><div class="row"><span class="avatar sm" style="--pc:${profileOf(st.id).color}">${profileOf(st.id).avatar}</span><b>${esc(st.name)}</b><select data-set-method="${st.id}">${opts(st.method)}</select></div><div class="muted small">${esc(st.email || '')} <button class="btn ghost sm" data-act="reset-pw" data-id="${st.id}">🔑 Reset password</button></div>
         <div class="mstats">${ratingStats(st).map(x => `<div class="${x.m === st.method ? 'cur' : ''}"><span>${M.METHODS[x.m].icon} ${esc(M.METHODS[x.m].name)}</span><b>${x.avg == null ? '–' : x.avg.toFixed(1) + '★'}</b><small>${x.n} rating${x.n === 1 ? '' : 's'}</small></div>`).join('')}</div></div>`).join('')}</div>
       <h2>📚 The methods</h2><div class="methods">${M.ORDER.map(k => { const x = M.METHODS[k]; return `<div class="method"><h3>${x.icon} ${esc(x.name)}</h3><p>${esc(x.tagline)}</p><p class="muted small">🔬 ${esc(x.science)}</p></div>`; }).join('')}</div>
       <h2>🤖 Bigger changes</h2><p class="muted">Want the lessons themselves rewritten? Copy this report and paste it to Claude.</p><button class="btn ghost" data-act="claude-report">📋 Copy feedback report</button></div>`;
@@ -857,7 +942,7 @@
   }
   function renderProgress(m) {
     const me = profileSummary(S);
-    const others = CFG.profiles.filter(p => p.id !== S.id).map(p => load(p.id)).filter(st => st.onboarded).map(profileSummary);
+    const others = accounts().filter(a => a.id !== S.id).map(a => load(a.id)).filter(st => st.onboarded).map(profileSummary);
     const imported = Object.values(S.friends || {});
     const board = [Object.assign({ me: true }, me)].concat(others, imported.filter(f => !others.some(o => o.name === f.name))).sort((a, b) => b.xp - a.xp);
     const a = arenaStats();
@@ -892,7 +977,7 @@
 
       <h2>⚙️ Settings</h2><div class="settings">
         <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
-        <div class="muted small">Profile: ${esc(S.name)} · age ${esc(S.age)}</div>
+        <div class="muted small">Signed in as <b>${esc(S.email)}</b> · ${esc(S.name)} · age ${esc(S.age)}</div>
         <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
         <textarea id="restorebox" hidden placeholder="Paste backup code and press Restore again"></textarea></div></div>`;
     $('#goal').addEventListener('change', e => { S.dailyGoal = +e.target.value; save(); renderTop(); });
@@ -907,13 +992,16 @@
     const act = el.dataset.act;
     if (el.tagName === 'A') e.preventDefault();
     switch (act) {
-      case 'pick': return pick(el.dataset.id);
+      case 'auth-mode': { const f = $('#authform'); if (f && f.email) authEmail = f.email.value; return renderAuth(el.dataset.m); }
+      case 'quick-acct': { authEmail = el.dataset.email; const f = $('#authform'); if (f) { f.email.value = authEmail; f.password.focus(); } return; }
+      case 'toggle-pw': { const i = el.parentElement.querySelector('input'); i.type = i.type === 'password' ? 'text' : 'password'; return; }
+      case 'reset-pw': return resetPassword(el.dataset.id);
       case 'toggle-track': { const set = new Set(S._pickTracks || S.tracks || []); set.has(el.dataset.id) ? set.delete(el.dataset.id) : set.add(el.dataset.id); S._pickTracks = [...set]; return renderTrackPicker(); }
       case 'save-tracks': { const list = TRACKS.map(t => t.id).filter(id => (S._pickTracks || S.tracks || []).includes(id)); if (!list.length) return; delete S._pickTracks; S.tracks = list; if (!list.includes(S.track)) S.track = list[0]; save(); document.body.classList.remove('no-shell'); return go('learn'); }
       case 'cancel-tracks': delete S._pickTracks; document.body.classList.remove('no-shell'); return go('progress');
       case 'change-tracks': S._pickTracks = (S.tracks || []).slice(); return renderTrackPicker();
       case 'set-track': S.track = el.dataset.id; save(); return renderLearn($('#main'));
-      case 'switch': if (window.TQ_Arena) window.TQ_Arena.pause(); stopTimer(); S = null; P = null; $('#overlay').hidden = true; history.replaceState(null, '', location.pathname + location.search); return renderPicker();
+      case 'switch': if (window.TQ_Arena) window.TQ_Arena.pause(); stopTimer(); V.stop(); return signOut();
       case 'go': return go(el.dataset.v);
       case 'open-lesson': if (!LBYID[el.dataset.id] || !unlocked(LBYID[el.dataset.id])) return toast('🔒 Finish the earlier lessons first'); return openLesson(el.dataset.id);
       case 'start-review': return openReview();
@@ -979,7 +1067,7 @@
         try { const st = b64d(box.value.replace(/^MTBK\./, '')); if (st.id !== S.id) { if (!(await confirmBox(`This backup belongs to "${st.name}". Load it into ${S.name}'s profile anyway?`, 'Load'))) return; st.id = S.id; } S = Object.assign(fresh(profileOf(S.id)), st); save(); toast('✅ Progress restored'); render(); }
         catch (err) { toast('Backup code is invalid.'); } return;
       }
-      case 'reset': if (await confirmBox(`Erase ALL of ${S.name}'s progress (lessons, grades, Arena, XP)? This can't be undone.`, 'Erase')) { S = fresh(profileOf(S.id)); S.onboarded = false; save(); renderOnboarding(); } return;
+      case 'reset': if (await confirmBox(`Erase ALL of ${S.name}'s progress (lessons, grades, Arena, XP)? Your account stays. This can't be undone.`, 'Erase')) { const keep = { name: S.name, email: S.email, age: S.age }; S = Object.assign(fresh(profileOf(S.id)), keep, { onboarded: true }); save(); render(); } return;
     }
   });
   document.addEventListener('keydown', e => {
@@ -994,7 +1082,9 @@
   window.TQ_App = { get S() { return S; }, save, addXP, toast, confirmBox, esc, fmt$, fmtR, md, checkBadges, arenaStats, go, askCoach: (q) => { go('coach'); askCoach(q); } };
 
   document.title = CFG.appName;
-  // Always ask "who's on the desk?" when the app opens; the chosen trader's saved progress is loaded.
+  // Open straight into the signed-in account (if "stay signed in"), otherwise show sign in / create account.
   history.replaceState(null, '', location.pathname + location.search);
-  renderPicker();
+  let sid = ''; try { sid = sessionStorage.getItem(SESSKEY) || ''; } catch (e) { }
+  sid = sid || storeGet(SESSKEY) || '';
+  if (sid && acctOf(sid)) enter(sid); else renderAuth();
 })();
