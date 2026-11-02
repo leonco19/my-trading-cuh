@@ -457,7 +457,8 @@
     if (isOwnerEmail()) nav.push(['lab', '🧪', 'Lab']);
     $('#app').innerHTML = `<div id="shell" data-kind="${want}">
       <nav class="side"><div class="logo"><span class="logo-mark">◢</span> <span>${esc(CFG.appName)}</span></div>${nav.map(([v, i, t]) => `<a href="#${v}" class="nav-${v}" data-act="go" data-v="${v}"><span class="ni">${i}</span><span class="nt">${t}</span>${v === 'lab' ? '<span class="dot" id="labdot" hidden></span>' : ''}</a>`).join('')}
-        <a href="#" class="switch" data-act="switch"><span class="ni">🚪</span><span class="nt">Sign out</span></a></nav>
+        <a href="#" class="switch" data-act="check-updates"><span class="ni">🔄</span><span class="nt">Check for updates</span></a>
+        <a href="#" class="switch2" data-act="switch"><span class="ni">🚪</span><span class="nt">Sign out</span></a></nav>
       <div class="col"><header class="top" id="top"></header><main id="main"></main></div></div>`;
   }
   function renderTop() {
@@ -1125,12 +1126,50 @@
       <h2>⚙️ Settings</h2><div class="settings">
         <label>Daily XP target <select id="goal">${[10, 20, 30, 50, 80].map(g => `<option ${g === S.dailyGoal ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
         <div class="muted small">Signed in as <b>${esc(S.email)}</b> · ${esc(S.name)} · age ${esc(S.age)}</div>
-        <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn ghost sm" data-act="switch">🚪 Sign out</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
+        <div class="row"><button class="btn ghost sm" data-act="backup">💾 Copy backup code</button><button class="btn ghost sm" data-act="restore">📥 Restore from backup</button><button class="btn ghost sm" data-act="check-updates">🔄 Check for updates</button><span class="muted small" id="appver"></span><button class="btn ghost sm" data-act="switch">🚪 Sign out</button><button class="btn danger sm" data-act="reset">Reset my progress</button></div>
         <textarea id="restorebox" hidden placeholder="Paste backup code and press Restore again"></textarea></div></div>`;
     $('#goal').addEventListener('change', e => { S.dailyGoal = +e.target.value; save(); renderTop(); });
+    showVersion();
     const vn = $('#vname'), vr = $('#vrate');
     const setV = () => { S.voice = { name: vn.value, rate: +vr.value }; V.set(S.voice); save(); };
     if (vn) { vn.addEventListener('change', () => { setV(); V.speak(`Yo ${S.name}, this is my new voice.`); }); vr.addEventListener('change', () => { setV(); V.speak('This is how fast I talk now.'); }); }
+  }
+
+  /* ───────── check for updates ───────── */
+  const vnum = v => (String(v || '').match(/(\d+)$/) || [])[1] || '?';
+  async function currentVersion() {
+    try { const v = (await caches.keys()).find(k => /^mtb-v\d+$/.test(k)); if (v) return v; } catch (e) { }
+    return null;
+  }
+  async function latestVersion() {
+    const txt = await (await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' })).text();
+    return (txt.match(/VERSION = '([^']+)'/) || [])[1] || null;
+  }
+  async function showVersion() { const el = $('#appver'); if (el) { const v = await currentVersion(); el.textContent = v ? 'Version ' + vnum(v) : ''; } }
+  function restartApp() {
+    try { save(); C.flushAll(); } catch (e) { }
+    setTimeout(() => location.reload(), 600);
+  }
+  async function checkUpdates(btn) {
+    const label = btn.textContent; btn.disabled = true; btn.textContent = '🔄 Checking…';
+    const done = msg => { btn.disabled = false; btn.textContent = label; if (msg) toast(msg); };
+    let latest;
+    try { latest = await latestVersion(); } catch (e) { return done('📡 Can\'t check right now. Are you online?'); }
+    const cur = await currentVersion();
+    if (latest && cur === latest) return done(`✅ You have the newest version (${vnum(latest)})`);
+    btn.textContent = '⬇️ Updating…';
+    toast(`⬇️ Getting version ${vnum(latest)}…`, 'level');
+    const swc = navigator.serviceWorker;
+    const reg = swc && await swc.getRegistration().catch(() => null);
+    if (!reg) return restartApp();
+    let restarted = false;
+    const go2 = () => { if (restarted) return; restarted = true; toast('✨ Updated! Restarting…', 'badge'); restartApp(); };
+    swc.addEventListener('controllerchange', go2, { once: true });
+    try { await reg.update(); } catch (e) { }
+    // If the new version installs without taking over (or there's no SW change), restart anyway after a moment.
+    const nw = reg.installing || reg.waiting;
+    if (nw) nw.addEventListener('statechange', () => { if (nw.state === 'activated') go2(); });
+    setTimeout(go2, 6000);
   }
 
   /* ───────── events ───────── */
@@ -1143,6 +1182,7 @@
       case 'quick-acct': { authEmail = el.dataset.email; const f = $('#authform'); if (f) { f.email.value = authEmail; f.password.focus(); } return; }
       case 'toggle-pw': { const i = el.parentElement.querySelector('input'); i.type = i.type === 'password' ? 'text' : 'password'; return; }
       case 'reset-pw': return resetPassword(el.dataset.id);
+      case 'check-updates': return checkUpdates(el);
       case 'forgot-pw': {
         const f = $('#authform'); const email = normEmail(f.email.value); const err = $('#ob-err');
         if (!validEmail(email)) { err.textContent = 'Type your email first, then tap the reset link.'; return; }
@@ -1232,7 +1272,7 @@
   window.addEventListener('resize', () => { if (view === 'arena' && window.TQ_Arena) window.TQ_Arena.redraw(); });
 
   /* ───────── public API for arena.js ───────── */
-  window.TQ_App = { get S() { return S; }, save, addXP, toast, confirmBox, esc, fmt$, fmtR, md, checkBadges, arenaStats, go, askCoach: (q) => { go('coach'); askCoach(q); } };
+  window.TQ_App = { get S() { return S; }, checkUpdates, currentVersion, save, addXP, toast, confirmBox, esc, fmt$, fmtR, md, checkBadges, arenaStats, go, askCoach: (q) => { go('coach'); askCoach(q); } };
 
   document.title = CFG.appName;
   // Open straight into the signed-in account (if "stay signed in"), otherwise show sign in / create account.
