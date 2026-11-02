@@ -222,9 +222,17 @@
   let authMode = null, authEmail = '';
   function renderAuth(mode) {
     document.body.classList.add('no-shell');
-    authMode = mode || authMode || (accounts().length ? 'signin' : 'signup');
+    authMode = mode || authMode || 'welcome';
     const list = accounts();
     const logo = `<div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div>`;
+    if (authMode === 'welcome') {
+      $('#app').innerHTML = `<div class="picker welcome">${logo}<div class="w-hero">📈</div><h1>Learn to trade. For real.</h1>
+        <p class="muted">Lessons, a trading simulator, and Cuh, your coach. All with virtual money.</p>
+        <div class="w-btns"><button class="btn primary big" data-act="auth-mode" data-m="signin">Sign in</button>
+        <button class="btn ghost big" data-act="auth-mode" data-m="signup">Create account</button></div></div>`;
+      return;
+    }
+    const back = '<button type="button" class="btn ghost" data-act="auth-mode" data-m="welcome">← Back</button>';
     if (authMode === 'signin') {
       $('#app').innerHTML = `<div class="picker">${logo}<h1>Welcome back</h1>
         ${list.length ? `<div class="quick">${list.map(x => `<button class="qacct" data-act="quick-acct" data-email="${esc(x.email)}" style="--pc:${x.color}"><span class="avatar sm">${x.avatar}</span>${esc(x.name)}</button>`).join('')}</div>` : ''}
@@ -235,6 +243,7 @@
           <div class="err" id="ob-err"></div>
           <button class="btn primary big" type="submit">Sign in</button>
           <p class="muted small center-t">New here? <a href="#" data-act="auth-mode" data-m="signup">Create an account</a></p>
+          ${back}
           <p class="muted small center-t">Forgot your password? ${esc(ownerName())} can reset it in the 🧪 Lab on this device.</p>
         </form></div>`;
     } else {
@@ -242,7 +251,7 @@
         .filter(x => x.st && x.st.onboarded && !acctOf(x.p.id));
       $('#app').innerHTML = `<div class="picker">${logo}<h1>Create your account</h1><p class="muted">You sign in with your email and password.</p>
         <form class="onboard" id="authform" novalidate>
-          <label>Email<input name="email" type="email" autocomplete="username" required value="${esc(authEmail)}" placeholder="you@example.com"></label>
+          <label>Email<input name="email" type="email" autocomplete="username" required value="${esc(authEmail)}" placeholder="you@example.com"><span class="field-msg" id="email-msg"></span></label>
           <label>Password<span class="pw"><input name="password" type="password" autocomplete="new-password" required><button type="button" class="eye" data-act="toggle-pw" title="Show password">👁️</button></span></label>
           <label>What should Cuh call you?<input name="name" required maxlength="30" placeholder="Your name"></label>
           <label>Age<input name="age" type="number" min="10" max="99" required placeholder="e.g. 17"></label>
@@ -252,10 +261,20 @@
           <p class="muted small">🔒 Saved only on this device. Your password is stored scrambled, never as plain text.</p>
           <div class="err" id="ob-err"></div>
           <button class="btn primary big" type="submit">Create account 🚀</button>
-          ${list.length ? '<p class="muted small center-t">Already have an account? <a href="#" data-act="auth-mode" data-m="signin">Sign in</a></p>' : ''}
+          <p class="muted small center-t">Already have an account? <a href="#" data-act="auth-mode" data-m="signin">Sign in</a></p>
+          ${back}
         </form></div>`;
     }
     const f = $('#authform');
+    if (authMode === 'signup') {
+      const em = f.elements.email, msg = $('#email-msg');
+      const checkEmail = () => {
+        const taken = accounts().some(x => x.email === normEmail(em.value));
+        msg.innerHTML = taken ? '⚠️ This email has an account already. <a href="#" data-act="auth-mode" data-m="signin">Sign in instead</a>' : '';
+        em.classList.toggle('bad-in', taken);
+      };
+      em.addEventListener('input', checkEmail); checkEmail();
+    }
     f.addEventListener('submit', e => { e.preventDefault(); authMode === 'signin' ? doSignIn(f) : doSignUp(f); });
     const first = f.querySelector(authEmail ? 'input[name=password]' : 'input[name=email]'); if (first) first.focus();
   }
@@ -277,7 +296,7 @@
   }
   async function doSignUp(f) {
     const err = $('#ob-err'); const E = f.elements; const email = normEmail(E.email.value), pw = E.password.value, name = E.namedItem('name').value.trim(), age = +E.age.value;
-    const e = !validEmail(email) ? 'Please enter a valid email.' : accounts().some(x => x.email === email) ? 'This email already has an account here. Sign in instead.' : !pw ? 'Please choose a password (anything you like).' : !name ? 'Tell Cuh what to call you.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
+    const e = !validEmail(email) ? 'Please enter a valid email.' : accounts().some(x => x.email === email) ? 'This email has an account already. Sign in instead.' : !pw ? 'Please choose a password (anything you like).' : !name ? 'Tell Cuh what to call you.' : !(age >= 10 && age <= 99) ? 'Please enter a valid age.' : '';
     if (e) { err.textContent = e; return; }
     err.textContent = '';
     const legacyId = E.legacy ? E.legacy.value : '';
@@ -306,7 +325,7 @@
     if (S) authEmail = S.email || '';
     S = null; P = null; $('#overlay').hidden = true;
     history.replaceState(null, '', location.pathname + location.search);
-    renderAuth('signin');
+    renderAuth('welcome');
   }
   async function resetPassword(id) {
     const a = acctOf(id); if (!a) return;
