@@ -2,7 +2,7 @@
 
 A game-style app that teaches day trading from scratch, made for **Leon** and **Barda**.
 
-- 🏠 **Desk**: 11 seasons, 42 lessons (day trading, plus **Swing Trading** and **Investing**). Your XP is your own stock price ($LEON / $BRDA), with green-day streaks, trader ranks and badges
+- 🏠 **Desk**: 11 seasons, 42 lessons (day trading, plus **Swing Trading** and **Investing**). XP, green-day streaks, trader ranks and badges
 - 🧑‍🏫 **4 teaching methods**: 💬 Bro Talk (chat), 🎯 Call It First (guess first), 📖 Deep Dive (full explanation), ⚡ Market Rush (timed, with combos). All of them are built on retrieval practice, and Review uses spaced repetition
 - ⭐ **Rate every lesson**: a low rating asks why. If the reason makes sense, a change request goes to Leon's 🧪 **Lab** (or to WhatsApp with a code if you're on different phones). Nothing changes until Leon approves
 - ✅ **Quizzes & grades**: every lesson ends with a grade. Each answer is remembered per learner, so the app knows what you've mastered and what needs work

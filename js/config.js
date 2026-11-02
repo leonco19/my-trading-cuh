@@ -2,10 +2,9 @@
 window.TQ_CONFIG = {
   appName: 'My Trading Bro',
   // Fixed learners for now. Add more objects here later to open it to friends & family.
-  // "ticker" is the learner's own "stock": it climbs as they learn.
   profiles: [
-    { id: 'leon', name: 'Leon', avatar: '🦁', color: '#4c8dff', ticker: 'LEON' },
-    { id: 'barda', name: 'Barda', avatar: '🐺', color: '#9b6bff', ticker: 'BRDA' },
+    { id: 'leon', name: 'Leon', avatar: '🦁', color: '#4c8dff' },
+    { id: 'barda', name: 'Barda', avatar: '🐺', color: '#9b6bff' },
   ],
   // The boss: this learner gets the 🧪 Lab, where they approve or decline teaching-method changes.
   owner: 'leon',

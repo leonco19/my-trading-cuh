@@ -60,13 +60,11 @@
   function saveLab(L) { storeSet(LABKEY, JSON.stringify(L)); }
   const pendingCount = () => lab().requests.filter(r => r.status === 'pending').length;
 
-  /* ───────── XP = your stock price, rank, green days ───────── */
+  /* ───────── XP, rank, green days ───────── */
   const RANKS = ['Intern', 'Analyst', 'Junior Trader', 'Trader', 'Senior Trader', 'Desk Head', 'Portfolio Manager', 'Market Wizard'];
   const level = xp => Math.floor(Math.sqrt(xp / 25)) + 1;
   const levelXp = lv => 25 * (lv - 1) * (lv - 1);
   const title = lv => RANKS[Math.min(RANKS.length - 1, Math.floor((lv - 1) / 2))];
-  const price = xp => 10 + xp / 10;
-  const tickerOf = st => '$' + ((profileOf(st.id) || {}).ticker || st.name.slice(0, 4).toUpperCase());
   function touchStreak() {
     const d = today(); const st = S.streak;
     if (st.last === d) return;
@@ -80,22 +78,9 @@
     const before = level(S.xp);
     S.xp += n; S.dailyXp[today()] = (S.dailyXp[today()] || 0) + n;
     touchStreak(); checkBadges(); save(); renderTop();
-    toast(`${tickerOf(S)} ▲ +${n} XP${why ? ' · ' + why : ''}`, 'xp');
+    toast(`⚡ +${n} XP${why ? ' · ' + why : ''}`, 'xp');
     if (level(S.xp) > before) setTimeout(() => toast(`🚀 Promoted! You're now ${title(level(S.xp))} (Lv ${level(S.xp)})`, 'level'), 600);
   }
-  function priceHistory(st, days) {
-    const pts = []; let xp = st.xp;
-    for (let i = 0; i < days; i++) { const d = new Date(); d.setDate(d.getDate() - i); pts.unshift(price(xp)); xp -= st.dailyXp[today(d)] || 0; }
-    return pts;
-  }
-  function spark(pts, w, h, color) {
-    const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
-    const xy = pts.map((p, i) => [i / (pts.length - 1) * w, h - 4 - (p - lo) / span * (h - 8)]);
-    const line = xy.map(([x, y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' ');
-    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="spark"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-      <polygon points="0,${h} ${line} ${w},${h}" fill="url(#sg)"/><polyline points="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
-  }
-
   /* ───────── grading, mastery & spaced repetition ───────── */
   const DAY = 86400000, BOX_DAYS = [0, 1, 3, 7, 16, 35];
   function lessonDone(id) { return !!(S.lessons[id] && S.lessons[id].completedAt); }
@@ -205,7 +190,7 @@
       const st = load(p.id);
       const sub = st.onboarded ? `${title(level(st.xp))} · 🟢 ${liveStreakOf(st)} green days` : 'New trader: tap to start';
       return `<button class="profile-card" data-act="pick" data-id="${p.id}" style="--pc:${p.color}"><span class="avatar">${p.avatar}</span><span class="pname">${esc(st.onboarded ? st.name : p.name)}</span>
-        <span class="ptick">${tickerOf(st)} <b>${fmt$(price(st.xp))}</b></span><span class="psub">${esc(sub)}</span></button>`;
+        <span class="ptick">⚡ <b>${st.xp}</b> XP</span><span class="psub">${esc(sub)}</span></button>`;
     }).join('');
     $('#app').innerHTML = `<div class="picker"><div class="logo-big"><span class="logo-mark">◢</span> ${esc(CFG.appName)}</div><h1>Who's on the desk today?</h1><div class="profiles">${cards}</div>
       <p class="muted small">Progress is saved in this browser. Use <b>Stats → Backup code</b> to move it to another device.</p></div>`;
@@ -214,7 +199,6 @@
     document.body.classList.add('no-shell');
     const p = profileOf(S.id);
     $('#app').innerHTML = `<div class="picker"><div class="avatar xl" style="--pc:${p.color}">${p.avatar}</div><h1>Welcome to the desk</h1>
-      <p class="muted">You get your own stock, <b>${tickerOf(S)}</b>. Every lesson you crush makes it go up 📈</p>
       <form class="onboard" id="onboard" novalidate>
         <label>Your name<input name="name" required maxlength="30" value="${esc(S.name)}"></label>
         <label>Age<input name="age" type="number" min="10" max="99" required placeholder="e.g. 17"></label>
@@ -262,7 +246,7 @@
     const dx = S.dailyXp[today()] || 0, pct = Math.min(100, Math.round(dx / S.dailyGoal * 100));
     const p = profileOf(S.id);
     t.innerHTML = `<div class="who" data-act="switch" title="Switch trader"><span class="avatar sm" style="--pc:${p.color}">${p.avatar}</span><div><b>${esc(S.name)}</b><div class="muted small">${title(lv)} · Lv ${lv}</div></div></div>
-      <div class="chips"><span class="chip tick" title="Your stock (1 XP = 10¢)">${tickerOf(S)} ${fmt$(price(S.xp))}${dx ? ` <em>▲${(dx / 10).toFixed(1)}</em>` : ''}</span><span class="chip fire" title="Green days in a row">🟢 ${liveStreak()}</span>
+      <div class="chips"><span class="chip tick" title="Total XP">⚡ ${S.xp}${dx ? ` <em>+${dx}</em>` : ''}</span><span class="chip fire" title="Green days in a row">🟢 ${liveStreak()}</span>
       <span class="chip goal" title="Today's target">${ring(pct)} ${dx}/${S.dailyGoal}</span></div>`;
     const dot = $('#labdot'); if (dot) { const n = pendingCount(); dot.hidden = !n; dot.textContent = n; }
   }
@@ -313,15 +297,14 @@
     syncRequest();
     const nx = nextLesson(), nl = nx && LBYID[nx];
     const p = profileOf(S.id);
-    const hist = priceHistory(S, 14), dx = S.dailyXp[today()] || 0;
+    const dx = S.dailyXp[today()] || 0;
     const lv = level(S.xp), cur = S.xp - levelXp(lv), need = levelXp(lv + 1) - levelXp(lv);
     const due = dueCards().length, missed = Object.values(S.cards).filter(v => v.last === false).length;
     let html = `<section class="stock-card" style="--pc:${p.color}">
-        <div class="sc-left"><div class="sc-tick">${tickerOf(S)} <span class="muted">· ${esc(S.name)}'s stock</span></div>
-          <div class="sc-price">${fmt$(price(S.xp))} <span class="${dx ? 'up' : 'flat'}">${dx ? '▲ +' + (dx / 10).toFixed(2) + ' today' : '— flat today'}</span></div>
-          <div class="sc-rank">${title(lv)} <span class="muted small">· ${need - cur} XP to promotion</span></div>
-          <div class="sc-meta"><span>🟢 <b>${liveStreak()}</b> green day${liveStreak() === 1 ? '' : 's'}</span><span>🎯 <b>${dx}/${S.dailyGoal}</b> today</span><span>${methodChip(S.method)}</span></div></div>
-        <div class="sc-chart">${spark(hist, 260, 110, '#00d68f')}<div class="muted small sc-cap">last 14 days</div></div></section>`;
+        <div class="sc-left"><div class="sc-tick">${esc(S.name)}'s desk</div>
+          <div class="sc-price">${title(lv)} <span class="muted">Lv ${lv}</span></div>
+          <div class="sc-promo"><div class="bar"><div style="width:${Math.round(cur / need * 100)}%"></div></div><span class="muted small">${need - cur} XP to your next promotion</span></div>
+          <div class="sc-meta"><span>⚡ <b>${S.xp}</b> XP</span><span>🟢 <b>${liveStreak()}</b> green day${liveStreak() === 1 ? '' : 's'}</span><span>🎯 <b>${dx}/${S.dailyGoal}</b> today</span><span>${methodChip(S.method)}</span></div></div></section>`;
     html += requestBanner();
     if (S.age && S.age < 18) html += `<div class="banner sim">🎮 <b>Simulator mode.</b> Everything here uses virtual money. Build the skill now, so you're ready for real markets at 18.</div>`;
     if (missed + due) html += `<div class="banner warn">🔁 <b>${missed + due} card${missed + due > 1 ? 's' : ''} ready to review</b>${missed ? ` (${missed} you missed${due ? `, ${due} due so you don't forget` : ''})` : ' (due so you don\'t forget)'}. <a href="#review" data-act="go" data-v="review">Review now →</a></div>`;
@@ -509,7 +492,7 @@
       <div class="sticket"><div class="t-head"><span>🔔 SESSION CLOSED</span><span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
         <h1>${P.lesson.icon} ${esc(P.lesson.title)}</h1>
         <div class="t-grade ${score >= 80 ? 'up' : 'low'}">${letter(score)}<small>${score}%</small></div>
-        <div class="res-stats"><div class="rs"><b>${right}/${qIdx.length}</b><span>First try</span></div><div class="rs"><b>🔥 ${P.bestCombo}</b><span>Best combo</span></div><div class="rs"><b class="up">+${xp}</b><span>XP · ${tickerOf(S)} ▲${(xp / 10).toFixed(1)}</span></div></div>
+        <div class="res-stats"><div class="rs"><b>${right}/${qIdx.length}</b><span>First try</span></div><div class="rs"><b>🔥 ${P.bestCombo}</b><span>Best combo</span></div><div class="rs"><b class="up">+${xp}</b><span>XP earned</span></div></div>
         <p class="verdict">${verdict}</p></div>
       ${P.mistakes.length ? `<div class="mistakes"><h3>📝 Remember these</h3>${P.mistakes.map(x => `<div class="mist"><b>${esc(x.q)}</b><div>${esc(x.why)}</div></div>`).join('')}<p class="muted small">Saved to your <b>Review</b> list.</p></div>` : ''}
       ${P.kind === 'lesson' ? `<div class="rate" id="rate"><h3>How did you like learning with ${mm.icon} ${esc(mm.name)}?</h3>
@@ -705,7 +688,7 @@
     const a = arenaStats(st);
     const done = LESSONS.filter(l => st.lessons[l.id] && st.lessons[l.id].completedAt).length;
     const g = Object.values(st.lessons).filter(x => x.last != null).map(x => x.last);
-    return { name: st.name, ticker: tickerOf(st), xp: st.xp, level: level(st.xp), streak: liveStreakOf(st), done, avg: g.length ? Math.round(g.reduce((x, y) => x + y, 0) / g.length) : 0, trades: a.trades, exp: +a.expectancy.toFixed(2), totalR: +a.totalR.toFixed(1), at: today() };
+    return { name: st.name, xp: st.xp, level: level(st.xp), streak: liveStreakOf(st), done, avg: g.length ? Math.round(g.reduce((x, y) => x + y, 0) / g.length) : 0, trades: a.trades, exp: +a.expectancy.toFixed(2), totalR: +a.totalR.toFixed(1), at: today() };
   }
   function renderProgress(m) {
     const me = profileSummary(S);
@@ -718,7 +701,7 @@
     const mm = M.METHODS[S.method];
     m.innerHTML = `<div class="page"><h1>📊 Stats: ${esc(S.name)}</h1>
       <div class="stat-grid">
-        <div class="stat"><b>${fmt$(price(S.xp))}</b><span>${tickerOf(S)} share price</span></div><div class="stat"><b>${title(me.level)}</b><span>Rank · Lv ${me.level}</span></div>
+        <div class="stat"><b>⚡ ${S.xp}</b><span>Total XP</span></div><div class="stat"><b>${title(me.level)}</b><span>Rank · Lv ${me.level}</span></div>
         <div class="stat"><b>🟢 ${me.streak}</b><span>Green days (best ${S.streak.best})</span></div><div class="stat"><b>${me.done}/${LESSONS.length}</b><span>Lessons</span></div>
         <div class="stat"><b>${letter(me.avg)} · ${me.avg}%</b><span>Average grade</span></div><div class="stat"><b>${fmtR(a.expectancy)}</b><span>Arena expectancy (${a.trades} trades)</span></div></div>
 
@@ -728,8 +711,8 @@
 
       <h2>🧠 Mastery by season</h2><div class="mastery">${COURSE.map(u => { const mm2 = unitMastery(u); const d = u.lessons.filter(l => lessonDone(l.id)).length; return `<div class="mrow"><span>${u.icon} ${esc(u.title)}</span><div class="bar"><div style="width:${mm2 || 0}%;background:${u.color}"></div></div><span class="small">${mm2 == null ? '–' : mm2 + '%'} · ${d}/${u.lessons.length}</span></div>`; }).join('')}</div>
 
-      <h2>🏁 The market board</h2><table class="tbl board"><tr><th>#</th><th>Stock</th><th>Price</th><th>Rank</th><th>🟢</th><th>Lessons</th><th>Avg</th><th>Arena</th></tr>
-        ${board.map((b, i) => `<tr class="${b.me ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td><b>${esc(b.ticker || '$' + b.name.slice(0, 4).toUpperCase())}</b> ${esc(b.name)}${b.me ? ' (you)' : ''}${b.at && !b.me && imported.includes(b) ? ` <span class="muted small">synced ${esc(b.at)}</span>` : ''}</td><td class="mono">${fmt$(price(b.xp))}</td><td>${title(b.level)}</td><td>${b.streak}</td><td>${b.done}</td><td>${letter(b.avg)}</td><td>${fmtR(b.exp)} · ${b.trades}t</td></tr>`).join('')}</table>
+      <h2>🏁 Leaderboard</h2><table class="tbl board"><tr><th>#</th><th>Trader</th><th>XP</th><th>Rank</th><th>🟢</th><th>Lessons</th><th>Avg</th><th>Arena</th></tr>
+        ${board.map((b, i) => `<tr class="${b.me ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td><b>${esc(b.name)}</b>${b.me ? ' (you)' : ''}${b.at && !b.me && imported.includes(b) ? ` <span class="muted small">synced ${esc(b.at)}</span>` : ''}</td><td class="mono">${b.xp}</td><td>${title(b.level)}</td><td>${b.streak}</td><td>${b.done}</td><td>${letter(b.avg)}</td><td>${fmtR(b.exp)} · ${b.trades}t</td></tr>`).join('')}</table>
       <div class="share"><div><b>Learning on different devices?</b> Send your friend your <i>share code</i>, and paste theirs here to update the board.</div>
         <div class="row"><button class="btn ghost sm" data-act="copy-share">📋 Copy my share code</button><input id="friendcode" placeholder="Paste friend's share code"><button class="btn ghost sm" data-act="add-friend">Add</button></div></div>
 

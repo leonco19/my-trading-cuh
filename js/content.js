@@ -54,7 +54,7 @@ window.TQ_COURSE = [
         id: 'u0l3', title: 'How this app works', icon: '🎮', xp: 10,
         cards: [
           { t: 'learn', title: 'Your path', html: `
-            <p>1. <b>Lessons</b> (this!): short sessions taught in different styles (chat, guess-first, deep dive or a timed rush). Every XP you earn raises <b>your own stock</b> 📈, and learning every day gives you <b>green days</b> 🟢.</p>
+            <p>1. <b>Lessons</b> (this!): short sessions taught in different styles (chat, guess-first, deep dive or a timed rush). Earn XP to get promoted (Intern → Analyst → … → Market Wizard), and learn every day to stack <b>green days</b> 🟢.</p>
             <p>2. <b>Arena</b>: a chart simulator. Trade realistic market days with virtual money. Every trade is scored in <b>R</b> (you'll learn this soon).</p>
             <p>3. <b>Bro</b> 😎: ask your coach questions any time.</p>
             <p>4. <b>News</b>: learn how real events (earnings, IPOs, bankruptcies, interest rates) move markets.</p>
